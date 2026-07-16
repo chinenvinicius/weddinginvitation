@@ -1,0 +1,78 @@
+<svg viewBox="0 0 400 620" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, -apple-system, sans-serif">
+  <rect width="400" height="620" fill="#0d1117"/>
+
+  <!-- Title -->
+  <text x="200" y="34" text-anchor="middle" fill="#f0f6fc" font-size="20" font-weight="700">How Docker Works</text>
+  <text x="200" y="54" text-anchor="middle" fill="#8b949e" font-size="12">Build · Ship · Run</text>
+
+  <!-- ===== SECTION 1: The Core Idea ===== -->
+  <text x="20" y="84" fill="#58a6ff" font-size="13" font-weight="700">1. THE CORE IDEA</text>
+  <text x="20" y="104" fill="#c9d1d9" font-size="11">Package an app + everything it needs</text>
+  <text x="20" y="120" fill="#c9d1d9" font-size="11">into one portable unit that runs anywhere.</text>
+
+  <!-- Image -> Container flow -->
+  <rect x="20" y="135" width="150" height="70" rx="8" fill="#1f6feb" opacity="0.18" stroke="#1f6feb"/>
+  <text x="95" y="160" text-anchor="middle" fill="#79c0ff" font-size="13" font-weight="700">IMAGE</text>
+  <text x="95" y="178" text-anchor="middle" fill="#8b949e" font-size="10">read-only template</text>
+  <text x="95" y="192" text-anchor="middle" fill="#8b949e" font-size="10">code + deps + OS libs</text>
+
+  <text x="185" y="173" text-anchor="middle" fill="#f0f6fc" font-size="16">→</text>
+
+  <rect x="205" y="135" width="175" height="70" rx="8" fill="#238636" opacity="0.18" stroke="#238636"/>
+  <text x="292" y="160" text-anchor="middle" fill="#7ee787" font-size="13" font-weight="700">CONTAINER</text>
+  <text x="292" y="178" text-anchor="middle" fill="#8b949e" font-size="10">a running instance</text>
+  <text x="292" y="192" text-anchor="middle" fill="#8b949e" font-size="10">of an image (alive)</text>
+
+  <!-- ===== SECTION 2: Architecture ===== -->
+  <text x="20" y="234" fill="#58a6ff" font-size="13" font-weight="700">2. THE ARCHITECTURE</text>
+
+  <!-- Client -->
+  <rect x="20" y="248" width="360" height="44" rx="8" fill="#6e40c9" opacity="0.18" stroke="#a371f7"/>
+  <text x="200" y="268" text-anchor="middle" fill="#d2a8ff" font-size="12" font-weight="700">DOCKER CLIENT</text>
+  <text x="200" y="284" text-anchor="middle" fill="#8b949e" font-size="10">docker build · docker run · docker pull  (you type these)</text>
+
+  <!-- arrow down -->
+  <text x="200" y="306" text-anchor="middle" fill="#f0f6fc" font-size="14">↓</text>
+
+  <!-- Daemon -->
+  <rect x="20" y="312" width="360" height="44" rx="8" fill="#1f6feb" opacity="0.18" stroke="#1f6feb"/>
+  <text x="200" y="332" text-anchor="middle" fill="#79c0ff" font-size="12" font-weight="700">DOCKER DAEMON (dockerd)</text>
+  <text x="200" y="348" text-anchor="middle" fill="#8b949e" font-size="10">the engine that builds, runs &amp; manages containers</text>
+
+  <!-- arrow down -->
+  <text x="200" y="370" text-anchor="middle" fill="#f0f6fc" font-size="14">↓</text>
+
+  <!-- Host kernel -->
+  <rect x="20" y="376" width="360" height="40" rx="8" fill="#8b949e" opacity="0.15" stroke="#8b949e"/>
+  <text x="200" y="401" text-anchor="middle" fill="#c9d1d9" font-size="12" font-weight="700">HOST OS KERNEL  (shared — no guest OS needed)</text>
+
+  <!-- ===== SECTION 3: Registry ===== -->
+  <text x="20" y="445" fill="#58a6ff" font-size="13" font-weight="700">3. THE REGISTRY (storehouse)</text>
+
+  <rect x="20" y="459" width="360" height="50" rx="8" fill="#238636" opacity="0.14" stroke="#238636"/>
+  <text x="200" y="479" text-anchor="middle" fill="#7ee787" font-size="12" font-weight="700">Docker Hub / Private Registry</text>
+  <text x="200" y="497" text-anchor="middle" fill="#8b949e" font-size="10">where images live and are shared</text>
+
+  <!-- pull / push arrows -->
+  <text x="120" y="525" text-anchor="middle" fill="#7ee787" font-size="11">↑ pull</text>
+  <text x="280" y="525" text-anchor="middle" fill="#d2a8ff" font-size="11">push ↑</text>
+
+  <!-- ===== SECTION 4: Lifecycle ===== -->
+  <text x="20" y="552" fill="#58a6ff" font-size="13" font-weight="700">4. THE LIFECYCLE</text>
+
+  <rect x="20" y="566" width="110" height="40" rx="8" fill="#1f6feb" opacity="0.18" stroke="#1f6feb"/>
+  <text x="75" y="584" text-anchor="middle" fill="#79c0ff" font-size="11" font-weight="700">BUILD</text>
+  <text x="75" y="598" text-anchor="middle" fill="#8b949e" font-size="9">Dockerfile → image</text>
+
+  <text x="138" y="589" text-anchor="middle" fill="#f0f6fc" font-size="13">→</text>
+
+  <rect x="150" y="566" width="100" height="40" rx="8" fill="#a371f7" opacity="0.18" stroke="#a371f7"/>
+  <text x="200" y="584" text-anchor="middle" fill="#d2a8ff" font-size="11" font-weight="700">SHIP</text>
+  <text x="200" y="598" text-anchor="middle" fill="#8b949e" font-size="9">push to registry</text>
+
+  <text x="258" y="589" text-anchor="middle" fill="#f0f6fc" font-size="13">→</text>
+
+  <rect x="270" y="566" width="110" height="40" rx="8" fill="#238636" opacity="0.18" stroke="#238636"/>
+  <text x="325" y="584" text-anchor="middle" fill="#7ee787" font-size="11" font-weight="700">RUN</text>
+  <text x="325" y="598" text-anchor="middle" fill="#8b949e" font-size="9">pull &amp; run anywhere</text>
+</svg>

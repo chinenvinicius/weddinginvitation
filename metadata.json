@@ -1,0 +1,6 @@
+{
+  "name": "Vinicius & Irish Wedding Invitation",
+  "description": "An elegant, interactive wedding invitation website for Vinicius and Irish featuring the entourage, ceremony details, dress code color guide, and a wishes guestbook.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
