@@ -4,14 +4,16 @@
  */
 
 import { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { Heart, ChevronDown } from 'lucide-react';
 import { useI18n } from '../i18n';
 
 interface InvitationCoverProps {
   onNavigateToNext: () => void;
+  opened: boolean;
 }
 
-export default function InvitationCover({ onNavigateToNext }: InvitationCoverProps) {
+export default function InvitationCover({ onNavigateToNext, opened }: InvitationCoverProps) {
   const { t } = useI18n();
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
@@ -53,7 +55,13 @@ export default function InvitationCover({ onNavigateToNext }: InvitationCoverPro
       <div className="absolute top-[30%] left-[20%] w-[35%] h-[35%] bg-[#FAF2E8]/40 rounded-full filter blur-[90px] pointer-events-none select-none" />
 
       {/* 2. Main Card Container (The Elegant Invitation Canvas — real paper stock look) */}
-      <div className="w-full max-w-5xl bg-transparent backdrop-blur-[2px] rounded-[2.5rem] shadow-[0_1px_2px_rgba(61,45,32,0.10),0_10px_22px_-10px_rgba(71,88,72,0.30),0_45px_90px_-30px_rgba(71,88,72,0.45),inset_0_1px_0_rgba(255,255,255,0.85)] border border-[#E9E2D2]/40 relative overflow-hidden p-6 sm:p-10 md:p-12">
+      <motion.div
+        className="w-full max-w-5xl bg-transparent backdrop-blur-[2px] rounded-[2.5rem] shadow-[0_1px_2px_rgba(61,45,32,0.10),0_10px_22px_-10px_rgba(71,88,72,0.30),0_45px_90px_-30px_rgba(71,88,72,0.45),inset_0_1px_0_rgba(255,255,255,0.85)] border border-[#E9E2D2]/40 relative overflow-hidden p-6 sm:p-10 md:p-12"
+        initial={{ opacity: 0, y: 80, scale: 0.92, rotateX: 25 }}
+        animate={opened ? { opacity: 1, y: 0, scale: 1, rotateX: 0 } : { opacity: 0, y: 80, scale: 0.92, rotateX: 25 }}
+        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: opened ? 0.15 : 0 }}
+        style={{ transformOrigin: 'top center', transformPerspective: 1200 }}
+      >
         {/* Paper fiber grain */}
         <div
           aria-hidden="true"
@@ -238,8 +246,9 @@ export default function InvitationCover({ onNavigateToNext }: InvitationCoverPro
 
         </div>
 
-      </div>
+        </div>
+
+      </motion.div>
     </div>
-  </div>
-);
+  );
 }

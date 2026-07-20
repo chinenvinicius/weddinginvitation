@@ -21,7 +21,35 @@ export default function BackgroundMusic() {
     audio.volume = 0.35; // Soft volume
     audioRef.current = audio;
 
+    const startPlayback = () => {
+      if (!audioRef.current || audioRef.current.paused === false) return;
+      audioRef.current.play()
+        .then(() => setIsPlaying(true))
+        .catch((error) => {
+          console.warn('Playback blocked by browser audio policy:', error);
+        });
+    };
+
+    // Attempt autoplay immediately on mount (works in browsers that allow it,
+    // e.g. when the user has interacted with the site before or has autoplay enabled).
+    startPlayback();
+
+    // Browser autoplay policies block sound without a user gesture. Fall back to
+    // starting on the first interaction anywhere on the page (scroll, click,
+    // touch, or key press), which is unavoidable while viewing the invitation.
+    const userGestures: (keyof WindowEventMap)[] = [
+      'click', 'scroll', 'wheel', 'touchstart', 'keydown', 'pointerdown',
+    ];
+
+    const onFirstGesture = () => {
+      startPlayback();
+      userGestures.forEach((evt) => window.removeEventListener(evt, onFirstGesture, true));
+    };
+
+    userGestures.forEach((evt) => window.addEventListener(evt, onFirstGesture, true));
+
     return () => {
+      userGestures.forEach((evt) => window.removeEventListener(evt, onFirstGesture, true));
       audio.pause();
       audioRef.current = null;
     };

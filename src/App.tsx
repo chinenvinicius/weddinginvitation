@@ -9,6 +9,8 @@ import { Heart, MapPin, Calendar, Languages } from 'lucide-react';
 
 // Components
 import BackgroundMusic from './components/BackgroundMusic';
+import BurgerMenu from './components/BurgerMenu';
+import EnvelopeIntro from './components/EnvelopeIntro';
 import InvitationCover from './components/InvitationCover';
 import PhotoGallery from './components/PhotoGallery';
 import SponsorsSec from './components/SponsorsSec';
@@ -23,6 +25,8 @@ export default function App() {
   const t = translations[language];
   // References to scroll down from the hero CTA
   const detailsRef = useRef<HTMLDivElement | null>(null);
+  // Envelope opening state — gates the reveal of the invitation card
+  const [opened, setOpened] = useState(false);
 
   useEffect(() => {
     document.documentElement.lang = languages.find((item) => item.code === language)?.htmlLang ?? 'en';
@@ -31,6 +35,16 @@ export default function App() {
   const scrollToDetails = () => {
     detailsRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  const navItems = [
+    { id: 'section-cover', label: t.navCover },
+    { id: 'section-gallery', label: t.navGallery },
+    { id: 'section-sponsors', label: t.navSponsors },
+    { id: 'section-entourage', label: t.navEntourage },
+    { id: 'section-ceremony', label: t.navCeremony },
+    { id: 'section-location', label: t.navVenue },
+    { id: 'section-details', label: t.navDetails },
+  ];
 
   return (
     <I18nContext.Provider value={{ language, t }}>
@@ -59,6 +73,7 @@ export default function App() {
           <span className="hidden sm:inline font-montserrat text-[9px] tracking-widest text-[#A38E7E] font-medium">
             {t.headerDate}
           </span>
+          <BurgerMenu items={navItems} />
           <div className="flex items-center gap-1 rounded-full bg-white/65 border border-sage-200/70 px-1.5 py-1 shadow-sm">
             <Languages className="w-3.5 h-3.5 text-sage-500 ml-1" aria-hidden="true" />
             {languages.map((item) => (
@@ -98,9 +113,12 @@ export default function App() {
       {/* Decorative Padding Top to account for floating header */}
       <div className="h-16" />
 
+      {/* Envelope opening overlay — shown until the user opens the invitation */}
+      {!opened && <EnvelopeIntro onOpen={() => setOpened(true)} />}
+
       {/* 2. Invitation Main Cover (Slide 1) */}
       <section id="section-cover">
-        <InvitationCover onNavigateToNext={scrollToDetails} />
+        <InvitationCover onNavigateToNext={scrollToDetails} opened={opened} />
       </section>
 
       {/* Visual Floral Separator Line */}
@@ -240,6 +258,10 @@ export default function App() {
 
           <p className="text-[10px] font-montserrat text-sage-500 uppercase tracking-wider">
             © 2026 Vinicius & Irish Goyo. {t.allRights}
+          </p>
+
+          <p className="text-[10px] font-montserrat text-sage-500 tracking-wider mt-3">
+            Made by <span className="font-semibold text-sage-300">WebMirai社</span> — CEO (Chinen Vinicius)
           </p>
         </div>
       </footer>
