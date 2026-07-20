@@ -94,79 +94,14 @@
   animation: pulse-slow 8s ease-in-out infinite;
 }
 
-.theme-dark {
-  background: #121811;
-  color: #eef3ec;
+@keyframes petal-fall {
+  0% { transform: translateY(-8vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(108vh) rotate(360deg); opacity: 0; }
 }
 
-.theme-dark header {
-  background: rgb(18 24 17 / 0.68) !important;
-  border-color: rgb(173 194 177 / 0.22) !important;
-}
-
-.theme-dark section > div,
-.theme-dark footer {
-  color: #eef3ec;
-}
-
-.theme-dark [class*="bg-[#FAF"],
-.theme-dark [class*="bg-[#F1"],
-.theme-dark [class*="bg-[#F3"],
-.theme-dark [class*="bg-[#F4"],
-.theme-dark [class*="bg-[#F6"],
-.theme-dark [class*="bg-[#E7"] {
-  background: linear-gradient(180deg, #151d15 0%, #202a20 100%) !important;
-}
-
-.theme-dark [class*="bg-white/"],
-.theme-dark [class*="bg-[#FFF7EC]"] {
-  background-color: rgb(20 26 20 / 0.68) !important;
-  border-color: rgb(221 228 218 / 0.16) !important;
-}
-
-.theme-dark #section-cover [class*="bg-white/10"] {
-  background-color: rgb(20 26 20 / 0.28) !important;
-  border-color: rgb(255 255 255 / 0.24) !important;
-}
-
-.theme-dark [class*="text-sage-900"],
-.theme-dark [class*="text-sage-850"],
-.theme-dark [class*="text-sage-800"],
-.theme-dark [class*="text-[#3D171A]"],
-.theme-dark [class*="text-[#5C0612]"] {
-  color: #f4f7f4 !important;
-}
-
-.theme-dark [class*="text-sage-700"],
-.theme-dark [class*="text-sage-600"],
-.theme-dark [class*="text-[#70645A]"],
-.theme-dark [class*="text-[#8D7A6C]"] {
-  color: #d1dbcf !important;
-}
-
-.theme-dark [class*="text-sage-500"],
-.theme-dark [class*="text-sage-400"],
-.theme-dark [class*="text-[#A38E7E]"] {
-  color: #adc2b1 !important;
-}
-
-.theme-dark input {
-  background: rgb(244 247 244 / 0.9) !important;
-  color: #1d251d !important;
-}
-
-.theme-dark input::placeholder {
-  color: rgb(71 88 72 / 0.72) !important;
-}
-
-.theme-dark a,
-.theme-dark button {
-  border-color: rgb(221 228 218 / 0.2);
-}
-
-.theme-dark .shadow-xl,
-.theme-dark .shadow-md,
-.theme-dark .shadow-lg,
-.theme-dark [class*="shadow-["] {
-  box-shadow: 0 28px 70px -24px rgb(0 0 0 / 0.75) !important;
+.petal-fall {
+  top: -2rem;
+  animation: petal-fall 14s linear infinite;
 }

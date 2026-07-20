@@ -14,8 +14,8 @@ export default function BackgroundMusic() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Elegant royalty-free acoustic background piano music
-    const audioUrl = 'https://assets.mixkit.co/music/preview/mixkit-delicate-piano-734.mp3';
+    // "Invitation Wedding" by leberch — royalty-free wedding instrumental (Pixabay)
+    const audioUrl = 'https://cdn.pixabay.com/download/audio/2025/07/16/audio_1cf135cdaa.mp3?filename=leberch-invitation-wedding-375839.mp3';
     const audio = new Audio(audioUrl);
     audio.loop = true;
     audio.volume = 0.35; // Soft volume

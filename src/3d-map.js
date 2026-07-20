@@ -7,6 +7,7 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 // Builds the animated venue scene inside `container`. Returns a dispose() for cleanup.
 export function initVenue3D(container){
 let renderer, scene, camera, controls, pin, raf, running=false, started=false, M={};
+let doorL, doorR, couple, coupleMats=[], groomLegs=[], brideBody, guests=[];
 
 function rnd(a,b){return a+Math.random()*(b-a);}
 function makeTex(draw,w,h,rx,ry){
@@ -340,6 +341,13 @@ function init(){
   const aT=texAsphalt();
   const road=new THREE.Mesh(new THREE.PlaneGeometry(74,24),new THREE.MeshStandardMaterial({map:aT,bumpMap:aT,bumpScale:0.35,roughness:1}));
   road.rotation.x=-Math.PI/2; road.position.set(0,0.02,19); road.receiveShadow=true; scene.add(road);
+  // side road branching off toward the horizon
+  const road2=new THREE.Mesh(new THREE.PlaneGeometry(10,60),new THREE.MeshStandardMaterial({map:aT,bumpMap:aT,bumpScale:0.35,roughness:1}));
+  road2.rotation.x=-Math.PI/2; road2.position.set(-26,0.02,55); road2.receiveShadow=true; scene.add(road2);
+  // center dashes on both roads
+  const dashM=new THREE.MeshStandardMaterial({color:0xf0f0f0,roughness:1});
+  for(let i=-5;i<=5;i++){const dx=i*6.5; if(dx>8) continue; /* keep dashes off the parking side */ const d=new THREE.Mesh(new THREE.PlaneGeometry(2.2,0.25),dashM);d.rotation.x=-Math.PI/2;d.position.set(dx,0.03,19);d.receiveShadow=true;scene.add(d);}
+  for(let i=0;i<7;i++){const d=new THREE.Mesh(new THREE.PlaneGeometry(0.25,2.2),dashM);d.rotation.x=-Math.PI/2;d.position.set(-26,0.03,33+i*4.5);d.receiveShadow=true;scene.add(d);}
 
   wall(48,0.7,11,1,0.35,-0.5,0,M.base);
 
@@ -414,8 +422,20 @@ function init(){
   wall(5.2,3.9,2.2,0,1.95,5.0);
   // entrance: detailed arched door + stone steps + lanterns
   const doorH=3.4, doorW=2.4;
-  const dMain=new THREE.Mesh(new THREE.BoxGeometry(doorW,doorH,0.18),M.door);
-  dMain.position.set(0,doorH/2+0.1,6.05); dMain.castShadow=true; scene.add(dMain);
+  // double doors hinged at the outer jambs so they swing open for the couple
+  function doorLeaf(side){
+    const pivot=new THREE.Group();
+    pivot.position.set(side*doorW/2, 0.1, 6.05);
+    const leaf=new THREE.Mesh(new THREE.BoxGeometry(doorW/2,doorH,0.14),M.door);
+    leaf.position.set(-side*doorW/4, doorH/2, 0);
+    leaf.castShadow=true; leaf.receiveShadow=true;
+    pivot.add(leaf); scene.add(pivot); return pivot;
+  }
+  doorL=doorLeaf(-1); doorR=doorLeaf(1);
+  // warm interior glow visible when the doors open
+  const glow=new THREE.Mesh(new THREE.PlaneGeometry(doorW,doorH),
+    new THREE.MeshBasicMaterial({color:0xffd9a0}));
+  glow.position.set(0,doorH/2+0.1,5.95); scene.add(glow);
   // stone arch frame
   const archMat=M.stonebase;
   const archSide=new THREE.Mesh(new THREE.BoxGeometry(0.5,doorH+0.4,0.6),archMat);
@@ -454,8 +474,10 @@ function init(){
   });
   // garden flower beds with blooms flanking the entrance
   function flowerBed(px,pz,n){
+    const spread=arguments.length>3?arguments[3]:5;
     for(let i=0;i<n;i++){
-      const fx=px+(Math.random()-0.5)*5, fz=pz+(Math.random()-0.5)*1.4;
+      const fx=px+(Math.random()-0.5)*spread, fz=pz+(Math.random()-0.5)*1.4;
+      if(Math.abs(fx)<2.0 && fz>6 && fz<24) continue; // keep the walkway clear
       const fh=0.3+Math.random()*0.25;
       const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,fh,5),new THREE.MeshStandardMaterial({color:0x4c7a40}));
       stem.position.set(fx,fh/2,fz); scene.add(stem);
@@ -465,6 +487,69 @@ function init(){
     }
   }
   flowerBed(-7,5.2,14); flowerBed(7,5.2,14);
+  // more beds: along the fence, building walls and path edges
+  flowerBed(-14,7.6,16); flowerBed(14,7.6,16);
+  flowerBed(-20,7.6,12); flowerBed(20,7.6,12);
+  flowerBed(-10.5,4.6,10); flowerBed(12.5,3.4,10); flowerBed(18.5,4.6,8);
+  flowerBed(-4.5,12,8,2.2); flowerBed(4.5,12,8,2.2);
+  flowerBed(-4.5,17,8,2.2); flowerBed(4.5,17,8,2.2);
+
+  // wedding flower arch over the entrance path
+  function flowerArch(pz,r){
+    const ag=new THREE.Group();
+    const bloomCols=[0xaa2039,0xf4e1e6,0xe7cf86,0x6e1023,0xffffff];
+    // two posts + curved top of small tube segments
+    const postMat=M.wood;
+    for(const s of [-1,1]){
+      const post=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.11,2.6,8),postMat);
+      post.position.set(s*r,1.3,0); post.castShadow=true; ag.add(post);
+    }
+    const seg=14;
+    for(let i=0;i<=seg;i++){
+      const a=Math.PI*(i/seg); // half circle
+      const x=Math.cos(a)*r, y=2.6+Math.sin(a)*(r*0.55);
+      const k=new THREE.Mesh(new THREE.SphereGeometry(0.09,6,5),postMat);
+      k.position.set(x,y,0); ag.add(k);
+    }
+    // greenery + blooms hugging posts and arc
+    function puff(x,y,z,s,col){
+      const leaf=new THREE.Mesh(new THREE.SphereGeometry(s,7,6),new THREE.MeshStandardMaterial({color:0x4c7a40,roughness:1}));
+      leaf.position.set(x,y,z); leaf.castShadow=true; ag.add(leaf);
+      const bl=new THREE.Mesh(new THREE.SphereGeometry(s*0.55,6,5),new THREE.MeshStandardMaterial({color:col,roughness:.7}));
+      bl.position.set(x+rnd(-s,s)*0.5,y+s*0.5,z+rnd(-s,s)*0.5); bl.castShadow=true; ag.add(bl);
+    }
+    for(const s of [-1,1]) for(let i=0;i<6;i++) puff(s*r+rnd(-0.12,0.12),0.4+i*0.42,rnd(-0.12,0.12),rnd(0.14,0.22),bloomCols[i%bloomCols.length]);
+    for(let i=0;i<=seg;i++){
+      const a=Math.PI*(i/seg);
+      puff(Math.cos(a)*r,2.6+Math.sin(a)*(r*0.55),rnd(-0.1,0.1),rnd(0.13,0.2),bloomCols[i%bloomCols.length]);
+    }
+    ag.position.set(0,0,pz); scene.add(ag);
+  }
+  flowerArch(10.5,2.1); // over the walkway, couple passes underneath
+  // scattered wildflowers pushed to the lawn, clear of the walkway
+  for(let i=0;i<40;i++){
+    const side=(i%2?1:-1);
+    flowerBed(side*rnd(4.5,7.5), 8.5+rnd(0,14), 4, 2.5);
+  }
+  // rose bushes: leafy ball studded with blooms
+  function roseBush(px,pz,s){
+    const bg=new THREE.Group();
+    const leaf=new THREE.Mesh(new THREE.SphereGeometry(s,10,8),new THREE.MeshStandardMaterial({color:0x466e39,roughness:1}));
+    leaf.position.y=s*0.8; leaf.scale.y=0.8; leaf.castShadow=true; leaf.receiveShadow=true; bg.add(leaf);
+    const cols=[0xaa2039,0xf4e1e6,0xe7cf86,0x6e1023,0xffffff];
+    for(let i=0;i<10;i++){
+      const a=rnd(0,Math.PI*2), e=rnd(0.15,1.2);
+      const bl=new THREE.Mesh(new THREE.SphereGeometry(s*rnd(0.16,0.24),7,6),new THREE.MeshStandardMaterial({color:cols[i%cols.length],roughness:.65}));
+      bl.position.set(Math.cos(a)*s*0.8*Math.sin(e),s*0.8+Math.cos(e)*s*0.75,Math.sin(a)*s*0.8*Math.sin(e));
+      bl.castShadow=true; bg.add(bl);
+    }
+    bg.position.set(px,0,pz); scene.add(bg);
+  }
+  // bushes along the facade, fence corners and path mouth
+  [[-6,5.6,0.7],[6,5.6,0.7],[-14.5,5.4,0.8],[14.8,5.4,0.8],[-19.8,6,0.6],[19.8,6,0.6],
+   [-3.4,8.4,0.55],[3.4,8.4,0.55],[-3.6,13,0.6],[3.6,13,0.6],[-3.4,18,0.55],[3.4,18,0.55],
+   [-10.5,4.9,0.6],[12.5,3.8,0.6],[18.5,4.9,0.55],[-22.5,7.2,0.7],[22.5,7.2,0.7]
+  ].forEach(function(p){ roseBush(p[0],p[1],p[2]); });
   // entrance flower urns
   function urn(ux){
     const ug=new THREE.Group();
@@ -480,8 +565,41 @@ function init(){
   }
   urn(-3.2); urn(3.2);
 
+  // parking lot moved to the right side of the road — walkway at x=0 stays clear
   const lineMat=new THREE.MeshStandardMaterial({color:0xe9e9e9,roughness:1});
-  for(let i=-4;i<=4;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(0.22,6),lineMat);m.rotation.x=-Math.PI/2;m.position.set(i*3.1,0.04,23);m.receiveShadow=true;scene.add(m);}
+  const stallX0=12, stallDx=3.1, stallN=7, stallZ=26.5;
+  for(let i=0;i<=stallN;i++){
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(0.22,5.5),lineMat);
+    m.rotation.x=-Math.PI/2; m.position.set(stallX0+i*stallDx,0.04,stallZ); m.receiveShadow=true; scene.add(m);
+  }
+  // lot boundary line
+  const edge=new THREE.Mesh(new THREE.PlaneGeometry(stallN*stallDx+1,0.22),lineMat);
+  edge.rotation.x=-Math.PI/2; edge.position.set(stallX0+stallN*stallDx/2,0.04,stallZ-2.85); edge.receiveShadow=true; scene.add(edge);
+  // a few parked cars for realism
+  function car(px,col){
+    const cg=new THREE.Group();
+    const bodyM=new THREE.MeshStandardMaterial({color:col,roughness:.35,metalness:.5});
+    const body=new THREE.Mesh(new THREE.BoxGeometry(2.0,0.55,4.1),bodyM); body.position.y=0.55; body.castShadow=true; cg.add(body);
+    const cab=new THREE.Mesh(new THREE.BoxGeometry(1.7,0.5,2.2),new THREE.MeshPhysicalMaterial({color:0x223040,roughness:.1,metalness:.2,clearcoat:1}));
+    cab.position.set(0,1.05,-0.2); cab.castShadow=true; cg.add(cab);
+    const whM=new THREE.MeshStandardMaterial({color:0x181a1c,roughness:.8});
+    [[-0.95,1.35],[0.95,1.35],[-0.95,-1.35],[0.95,-1.35]].forEach(function(p){
+      const w=new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.32,0.24,12),whM);
+      w.rotation.z=Math.PI/2; w.position.set(p[0],0.32,p[1]); w.castShadow=true; cg.add(w);
+    });
+    cg.position.set(px,0,stallZ); scene.add(cg);
+  }
+  car(stallX0+stallDx*0.5,0x8a8f95); car(stallX0+stallDx*2.5,0x5c1622); car(stallX0+stallDx*4.5,0x2c3e50); car(stallX0+stallDx*5.5,0xd8d4c8);
+  // low stone wall around the lot (open on the road side)
+  const lotX1=stallX0-1.2, lotX2=stallX0+stallN*stallDx+1.2, lotZback=stallZ+3.2;
+  const lotW=lotX2-lotX1, lotCx=(lotX1+lotX2)/2;
+  wall(lotW,0.75,0.45,lotCx,0.38,lotZback,0,M.stonebase);                 // back
+  wall(0.45,0.75,lotZback-23.4,lotX1,0.38,(lotZback+23.4)/2,0,M.stonebase); // left side
+  wall(0.45,0.75,lotZback-23.4,lotX2,0.38,(lotZback+23.4)/2,0,M.stonebase); // right side
+  // cap stones
+  wall(lotW+0.2,0.12,0.6,lotCx,0.81,lotZback,0,M.white);
+  wall(0.6,0.12,lotZback-23.4,lotX1,0.81,(lotZback+23.4)/2,0,M.white);
+  wall(0.6,0.12,lotZback-23.4,lotX2,0.81,(lotZback+23.4)/2,0,M.white);
   // stone path from road to entrance
   const pathMat=M.stonebase;
   for(let s=0;s<9;s++){
@@ -496,9 +614,29 @@ function init(){
     [-27,8,5.7],[-24,2,6.2],[-22,-5,6.8],[-17,-13,7.6],[-10,-19,6.4],
     [25,8,5.8],[28,1,6.4],[25,-6,6.9],[18,-14,7.5],[10,-20,6.3],
     [-4,-24,7.1],[4,-25,6.7],[15,-25,7.8],[-17,-25,7.4],[28,-20,6.6],
-    [-31,18,5.2],[-24,22,5.8],[24,20,5.5],[31,15,5.1],
-    [-30,31,4.8],[30,31,4.9]
+    [-31,18,5.2],[-24,22,5.8],[42,20,5.5],[41,10,5.1],
+    [-30,31,4.8],[40,33,4.9],
+    [-36,-8,6.2],[36,-4,6.5],[-38,10,5.4],[40,2,5.6],
+    [-14,32,5.0],[-6,34,4.6],[6,35,4.8],
+    [-34,40,5.8],[-18,42,6.0],[40,42,5.5],[22,44,5.9],
+    [-42,-20,6.8],[42,-18,7.0],[-26,-30,7.2],[26,-32,6.9],
+    // grove behind the building
+    [-8,-16,7.0],[0,-18,6.6],[8,-17,7.2],[-14,-20,6.8],[14,-21,7.0],
+    [-4,-28,7.4],[6,-30,7.1],[-20,-32,6.6],[20,-28,6.9],[0,-36,7.6],
+    [-12,-38,7.0],[12,-40,7.3],[-30,-24,6.4],[32,-24,6.7]
   ].forEach(function(p){ tree(p[0],p[1],p[2]); });
+  // plain green bushes dotted around the lawn and roadsides
+  const bushM=new THREE.MeshStandardMaterial({color:0x527a43,roughness:1});
+  const bushM2=new THREE.MeshStandardMaterial({color:0x648a52,roughness:1});
+  for(let i=0;i<34;i++){
+    const bx=rnd(-44,44), bz=rnd(-28,36);
+    if(bz>6&&bz<32&&Math.abs(bx)<38) continue;         // road + parking
+    if(Math.abs(bx)<24&&bz>-12&&bz<8) continue;        // building + garden
+    if(Math.abs(bx+26)<6&&bz>25) continue;             // side road
+    const b=new THREE.Mesh(new THREE.SphereGeometry(rnd(0.5,1.1),9,7),(i%2)?bushM:bushM2);
+    b.position.set(bx,rnd(0.3,0.5),bz); b.scale.y=0.72;
+    b.castShadow=true; b.receiveShadow=true; scene.add(b);
+  }
 
   function hill(x,z,s,c){const m=new THREE.Mesh(new THREE.SphereGeometry(s,18,12,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:c,roughness:1}));m.position.set(x,-2,z);m.scale.set(2,1,1.5);scene.add(m);}
   hill(-32,-44,18,0x6f8a55); hill(8,-54,24,0x5f7a49); hill(38,-42,16,0x789360);
@@ -512,6 +650,107 @@ function init(){
   const tip=new THREE.Mesh(new THREE.ConeGeometry(0.8,2.2,20),pmMat); tip.position.y=0.55; tip.rotation.x=Math.PI;
   const dot=new THREE.Mesh(new THREE.SphereGeometry(0.42,14,14),new THREE.MeshStandardMaterial({color:0xe7cf86,metalness:.4,roughness:.35})); dot.position.y=2.32;
   pin.add(tip,head,dot); pin.position.set(0,10,5); pin.traverse(function(o){if(o.isMesh)o.castShadow=true;}); scene.add(pin);
+
+  // --- bride & groom walking to the entrance ---
+  function trackMat(opts){const m=new THREE.MeshStandardMaterial(Object.assign({transparent:true},opts)); coupleMats.push(m); return m;}
+  function person(){return new THREE.Group();}
+  couple=new THREE.Group();
+  const skin=trackMat({color:0xe8bda0,roughness:.75});
+  const hairM=trackMat({color:0x1d1410,roughness:.6});
+  // groom: dark suit, white shirt
+  const groom=person();
+  const suit=trackMat({color:0x23262e,roughness:.7});
+  const shirt=trackMat({color:0xf3efe6,roughness:.8});
+  const gTorso=new THREE.Mesh(new THREE.CylinderGeometry(0.20,0.24,0.62,10),suit); gTorso.position.y=1.05; groom.add(gTorso);
+  const gChest=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.16,0.5,8),shirt); gChest.position.set(0,1.06,0.055); groom.add(gChest);
+  const gHead=new THREE.Mesh(new THREE.SphereGeometry(0.15,14,12),skin); gHead.position.y=1.56; groom.add(gHead);
+  const gHair=new THREE.Mesh(new THREE.SphereGeometry(0.155,14,10,0,Math.PI*2,0,Math.PI/2),hairM); gHair.position.y=1.585; groom.add(gHair);
+  for(const s of [-1,1]){
+    const arm=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.045,0.55,8),suit);
+    arm.position.set(s*0.27,1.08,0); arm.rotation.z=s*0.12; groom.add(arm);
+    const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.055,0.72,8),suit);
+    leg.geometry.translate(0,-0.36,0); leg.position.set(s*0.09,0.74,0); groom.add(leg); groomLegs.push(leg);
+    const shoe=new THREE.Mesh(new THREE.BoxGeometry(0.11,0.06,0.2),hairM);
+    shoe.position.set(0,-0.72,0.04); leg.add(shoe);
+  }
+  groom.position.x=0.42; couple.add(groom);
+  // bride: white gown + veil + bouquet
+  const bride=person();
+  const gown=trackMat({color:0xf7f3ea,roughness:.85});
+  const dress=new THREE.Mesh(new THREE.ConeGeometry(0.34,1.05,14),gown); dress.position.y=0.55; bride.add(dress); brideBody=dress;
+  const bTorso=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.17,0.42,10),gown); bTorso.position.y=1.22; bride.add(bTorso);
+  const bHead=new THREE.Mesh(new THREE.SphereGeometry(0.135,14,12),skin); bHead.position.y=1.56; bride.add(bHead);
+  const bHair=new THREE.Mesh(new THREE.SphereGeometry(0.14,14,10,0,Math.PI*2,0,Math.PI/1.7),hairM); bHair.position.y=1.585; bride.add(bHair);
+  const veilM=trackMat({color:0xffffff,roughness:.9,opacity:0.55});
+  veilM.userData.veil=true;
+  const veil=new THREE.Mesh(new THREE.ConeGeometry(0.17,0.75,10,1,true),veilM); veil.position.set(0,1.32,-0.1); bride.add(veil);
+  for(const s of [-1,1]){
+    const arm=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.035,0.5,8),skin);
+    arm.position.set(s*0.2,1.12,0.05); arm.rotation.z=s*0.35; arm.rotation.x=-0.5; bride.add(arm);
+  }
+  const bouquet=new THREE.Mesh(new THREE.SphereGeometry(0.11,10,8),trackMat({color:0x9c1a2d,roughness:.7}));
+  bouquet.position.set(0,1.02,0.24); bride.add(bouquet);
+  bride.position.x=-0.42; couple.add(bride);
+  couple.traverse(function(o){if(o.isMesh)o.castShadow=true;});
+  couple.position.set(0,0,21); couple.rotation.y=Math.PI; // walking toward the hall (facing -z)
+  scene.add(couple);
+
+  // cheering guests lining the walkway, facing the couple
+  function guest(px,pz){
+    const g=new THREE.Group();
+    const shirtCols=[0x69866b,0x7b2b37,0x8d7a6c,0x47614a,0x995c66,0x3e5a75,0xc2a14d,0x5c4a6e];
+    const skinCols=[0xe8bda0,0xd8a37f,0xc78e63,0xf0cbb0];
+    const shirtM=new THREE.MeshStandardMaterial({color:shirtCols[(Math.random()*shirtCols.length)|0],roughness:.8});
+    const skinM=new THREE.MeshStandardMaterial({color:skinCols[(Math.random()*skinCols.length)|0],roughness:.75});
+    const hairC=[0x1d1410,0x3a2415,0x584033,0x777777][(Math.random()*4)|0];
+    const hM=new THREE.MeshStandardMaterial({color:hairC,roughness:.6});
+    const torso=new THREE.Mesh(new THREE.CylinderGeometry(0.17,0.21,0.58,9),shirtM); torso.position.y=1.0; g.add(torso);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(0.135,12,10),skinM); head.position.y=1.47; g.add(head);
+    const hair=new THREE.Mesh(new THREE.SphereGeometry(0.14,12,8,0,Math.PI*2,0,Math.PI/2),hM); hair.position.y=1.49; g.add(hair);
+    const legM=new THREE.MeshStandardMaterial({color:0x2b2f36,roughness:.85});
+    for(const s of [-1,1]){
+      const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.05,0.66,7),legM);
+      leg.position.set(s*0.08,0.38,0); g.add(leg);
+      // raised cheering arms (pivot at shoulder)
+      const arm=new THREE.Mesh(new THREE.CylinderGeometry(0.042,0.038,0.5,7),shirtM);
+      arm.geometry.translate(0,0.25,0);
+      arm.position.set(s*0.22,1.18,0);
+      arm.rotation.z=s*2.5; // up and out
+      g.add(arm);
+      g.userData['arm'+(s<0?'L':'R')]=arm;
+    }
+    g.position.set(px,0,pz);
+    g.lookAt(0,0,pz); // face the walkway
+    g.userData.phase=rnd(0,Math.PI*2);
+    g.traverse(function(o){if(o.isMesh)o.castShadow=true;});
+    scene.add(g); guests.push(g);
+  }
+  for(let i=0;i<7;i++){ guest(-2.6-rnd(0,0.5), 9.5+i*1.7+rnd(-0.3,0.3)); guest(2.6+rnd(0,0.5), 10.3+i*1.7+rnd(-0.3,0.3)); }
+
+  // low hedge greenery bordering the walkway behind the guests
+  const hedgeM2=new THREE.MeshStandardMaterial({color:0x4f7040,roughness:1});
+  for(const s of [-1,1]){
+    const h=new THREE.Mesh(new THREE.BoxGeometry(0.8,0.55,13),hedgeM2);
+    h.position.set(s*3.9,0.28,15.2); h.castShadow=true; h.receiveShadow=true; scene.add(h);
+    // rounded hedge tops for softer look
+    for(let i=0;i<9;i++){
+      const b=new THREE.Mesh(new THREE.SphereGeometry(rnd(0.35,0.5),8,7),hedgeM2);
+      b.position.set(s*3.9+rnd(-0.2,0.2),0.55,9.5+i*1.45); b.castShadow=true; scene.add(b);
+    }
+  }
+
+  // grass tufts scattered on the lawn (clear of road, path and building)
+  const tuftM=new THREE.MeshStandardMaterial({color:0x6d9350,roughness:1});
+  const tuftM2=new THREE.MeshStandardMaterial({color:0x86a862,roughness:1});
+  for(let i=0;i<220;i++){
+    const tx=rnd(-45,45), tz=rnd(-30,34);
+    if(tz>6&&tz<32&&Math.abs(tx)<38) continue;          // road + lot
+    if(Math.abs(tx)<24&&tz>-12&&tz<8) continue;          // building + garden
+    const tuft=new THREE.Mesh(new THREE.ConeGeometry(rnd(0.06,0.12),rnd(0.25,0.5),4),(i%2)?tuftM:tuftM2);
+    tuft.position.set(tx,0.12,tz);
+    tuft.rotation.set(rnd(-0.25,0.25),rnd(0,3),rnd(-0.25,0.25));
+    scene.add(tuft);
+  }
 
   controls=new OrbitControls(camera,renderer.domElement);
   controls.target.set(0,3,-1);
@@ -534,6 +773,40 @@ function loop(){
   raf=requestAnimationFrame(loop);
   const t=performance.now()*0.001;
   if(pin) pin.position.y=10+Math.sin(t*2)*0.4;
+  // couple walk-in cycle: approach → doors open → enter → doors close → repeat
+  if(couple&&doorL){
+    const T=16, p=t%T;
+    const ease=function(v){return v<0?0:v>1?1:v*v*(3-2*v);};
+    const zStart=21, zDoor=6.9, zIn=5.0;
+    let z, opacity=1, walking=false;
+    if(p<9){ z=zStart+(zDoor-zStart)*ease(p/9); walking=true; }
+    else if(p<11){ const k=ease((p-9)/2); z=zDoor+(zIn-zDoor)*k; opacity=1-k; walking=true; }
+    else { z=zStart; opacity=0; }
+    couple.position.z=z;
+    couple.visible=opacity>0.02;
+    coupleMats.forEach(function(m){ m.opacity=(m.userData.veil?0.55:1)*opacity; });
+    if(walking&&couple.visible){
+      couple.position.y=Math.abs(Math.sin(t*6))*0.035; // gentle step bob
+      groomLegs[0].rotation.x=Math.sin(t*6)*0.5;
+      groomLegs[1].rotation.x=-Math.sin(t*6)*0.5;
+      if(brideBody) brideBody.rotation.y=Math.sin(t*5)*0.08; // gown sway
+    }
+    // doors swing open as the couple nears, close after they enter
+    let open=0;
+    if(p<9) open=ease((zDoor+4.5-z)/4.5);      // opening on approach
+    else if(p<11) open=1;                       // held open while entering
+    else if(p<13) open=1-ease((p-11)/2);        // closing
+    // swing inward (toward the hall) so leaves never clip the entrance steps
+    doorL.rotation.y=1.6*open;
+    doorR.rotation.y=-1.6*open;
+    // guests cheer: bounce + waving raised arms
+    for(let i=0;i<guests.length;i++){
+      const g=guests[i], ph=g.userData.phase;
+      g.position.y=Math.abs(Math.sin(t*5+ph))*0.09;
+      if(g.userData.armL) g.userData.armL.rotation.z=-2.5+Math.sin(t*7+ph)*0.35;
+      if(g.userData.armR) g.userData.armR.rotation.z=2.5-Math.sin(t*7+ph+1)*0.35;
+    }
+  }
   // banner gentle wave
   scene.traverse(function(o){ if(o.userData&&o.userData.baseY&&o.geometry){o.position.y=o.userData.baseY+Math.sin(t*2.5)*0.04; o.rotation.y=Math.sin(t*1.5)*0.12;} });
   controls.update();

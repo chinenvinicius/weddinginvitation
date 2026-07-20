@@ -70,15 +70,17 @@ function FloralCluster({ id, className = '' }: { id: string; className?: string 
 }
 
 // Masonry collage: images keep their natural aspect (no cropping), heights vary for a mixed look.
+// Grouped by color story: white by the sea → pink blossoms → denim golden hour
 const photos = [
-  { src: '/photos/b.jpg', alt: 'Vinicius & Irish smiling together', caption: 'In full bloom', tilt: 'sm:rotate-1' },
-  { src: '/photos/c.jpg', alt: 'Vinicius & Irish by the water', caption: 'By the sea', tilt: 'sm:rotate-2' },
-  { src: '/photos/e.jpg', alt: 'Vinicius & Irish together', caption: 'Just us', tilt: 'sm:-rotate-1' },
-  { src: '/photos/1777939364041.jpg', alt: 'Vinicius & Irish portrait', caption: 'You & me', tilt: 'sm:-rotate-2' },
-  { src: '/photos/1777939478097.jpg', alt: 'Vinicius & Irish portrait', caption: 'Forever', tilt: 'sm:rotate-1' },
-  { src: '/photos/d.jpg', alt: 'Vinicius & Irish moment', caption: 'Our moment', tilt: 'sm:rotate-2' },
-  { src: '/photos/1778618728657.jpg', alt: 'Vinicius & Irish portrait', caption: 'Side by side', tilt: 'sm:-rotate-1' },
-  { src: '/photos/1780707507748.jpg', alt: 'Vinicius & Irish portrait', caption: 'Always', tilt: 'sm:rotate-1' },
+  { src: '/photos/b.jpg', alt: 'Vinicius & Irish by the sea in white', caption: 'By the sea', tilt: 'sm:rotate-1' },
+  { src: '/photos/c.jpg', alt: 'Vinicius & Irish by the water', caption: 'Ocean breeze', tilt: 'sm:rotate-2' },
+  { src: '/photos/d.jpg', alt: 'Vinicius & Irish moment by the shore', caption: 'Just us', tilt: 'sm:-rotate-1' },
+  { src: '/photos/e.jpg', alt: 'Vinicius & Irish in pink among blossoms', caption: 'In full bloom', tilt: 'sm:-rotate-2' },
+  { src: '/photos/1777939364041.jpg', alt: 'Vinicius & Irish with pink flowers', caption: 'You & me', tilt: 'sm:rotate-1' },
+  { src: '/photos/1777939478097.jpg', alt: 'Vinicius & Irish under sakura', caption: 'Spring walk', tilt: 'sm:rotate-2' },
+  { src: '/photos/1778618728657.jpg', alt: 'Vinicius & Irish in denim at the park', caption: 'Golden hour', tilt: 'sm:-rotate-1' },
+  { src: '/photos/f.jpg', alt: 'Vinicius & Irish playful in denim', caption: 'Side by side', tilt: 'sm:rotate-1' },
+  { src: '/photos/1780707507748.jpg', alt: 'Vinicius & Irish portrait', caption: 'Forever', tilt: 'sm:-rotate-2' },
 ];
 
 export default function PhotoGallery() {

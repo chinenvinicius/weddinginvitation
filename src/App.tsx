@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { Heart, MapPin, Calendar, Languages, Moon, Sun } from 'lucide-react';
+import { Heart, MapPin, Calendar, Languages } from 'lucide-react';
 
 // Components
 import BackgroundMusic from './components/BackgroundMusic';
@@ -20,7 +20,6 @@ import { I18nContext, Language, languages, translations } from './i18n';
 
 export default function App() {
   const [language, setLanguage] = useState<Language>('en');
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const t = translations[language];
   // References to scroll down from the hero CTA
   const detailsRef = useRef<HTMLDivElement | null>(null);
@@ -37,7 +36,7 @@ export default function App() {
     <I18nContext.Provider value={{ language, t }}>
     <div
       id="wedding-invite-app"
-      className={`min-h-screen bg-[#FDFDFB] text-sage-900 font-sans selection:bg-sage-200 selection:text-sage-800 antialiased overflow-x-hidden relative ${isDarkMode ? 'theme-dark' : ''}`}
+      className="min-h-screen bg-[#FDFDFB] text-sage-900 font-sans selection:bg-sage-200 selection:text-sage-800 antialiased overflow-x-hidden relative"
     >
       
       {/* Full App Subtle Watercolor Paper Texture Background Overlay */}
@@ -60,15 +59,6 @@ export default function App() {
           <span className="hidden sm:inline font-montserrat text-[9px] tracking-widest text-[#A38E7E] font-medium">
             {t.headerDate}
           </span>
-          <button
-            type="button"
-            onClick={() => setIsDarkMode((value) => !value)}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/65 border border-sage-200/70 text-sage-700 shadow-sm transition-all hover:text-sage-950 cursor-pointer"
-            aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-            title={isDarkMode ? 'Light mode' : 'Dark mode'}
-          >
-            {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
           <div className="flex items-center gap-1 rounded-full bg-white/65 border border-sage-200/70 px-1.5 py-1 shadow-sm">
             <Languages className="w-3.5 h-3.5 text-sage-500 ml-1" aria-hidden="true" />
             {languages.map((item) => (
@@ -92,6 +82,19 @@ export default function App() {
         </div>
       </header>
 
+      {/* Gently falling flower petals overlay */}
+      <div className="pointer-events-none fixed inset-0 z-40 overflow-hidden" aria-hidden="true">
+        {['🌹','🌺','🌷','🌼','🌻','💐'].map((petal, i) => (
+          <span
+            key={i}
+            className="petal-fall absolute text-xl opacity-60"
+            style={{ left: `${8 + i * 16}%`, animationDelay: `${i * 2.5}s`, animationDuration: `${11 + i * 2}s` }}
+          >
+            {petal}
+          </span>
+        ))}
+      </div>
+
       {/* Decorative Padding Top to account for floating header */}
       <div className="h-16" />
 
@@ -103,7 +106,7 @@ export default function App() {
       {/* Visual Floral Separator Line */}
       <div className="w-full flex items-center justify-center py-6 bg-gradient-to-b from-[#F6F5F2] to-[#F3F4F1] select-none text-sage-300">
         <span className="h-px w-16 bg-sage-300/40" />
-        <span className="text-lg mx-3">🌸</span>
+        <span className="text-lg mx-3">🌺 🌹 🌺</span>
         <span className="h-px w-16 bg-sage-300/40" />
       </div>
 
@@ -118,7 +121,7 @@ export default function App() {
       {/* Visual Floral Separator Line */}
       <div className="w-full flex items-center justify-center py-6 bg-gradient-to-b from-[#F3F4F1] to-[#F3F4F1] select-none text-sage-300">
         <span className="h-px w-16 bg-sage-300/40" />
-        <span className="text-lg mx-3">📷</span>
+        <span className="text-lg mx-3">🌼 🌷 🌼</span>
         <span className="h-px w-16 bg-sage-300/40" />
       </div>
 
@@ -137,7 +140,7 @@ export default function App() {
       {/* Visual Floral Separator Line */}
       <div className="w-full flex items-center justify-center py-6 bg-gradient-to-b from-[#E7ECE6] to-[#E7ECE6] select-none text-sage-300">
         <span className="h-px w-16 bg-sage-300/30" />
-        <span className="text-lg mx-3">🌿</span>
+        <span className="text-lg mx-3">🌿 🌹 🌿</span>
         <span className="h-px w-16 bg-sage-300/30" />
       </div>
 
@@ -156,7 +159,7 @@ export default function App() {
       {/* Visual Floral Separator Line */}
       <div className="w-full flex items-center justify-center py-6 bg-gradient-to-b from-[#FAF9F5] to-[#FAF9F5] select-none text-sage-300">
         <span className="h-px w-16 bg-sage-300/40" />
-        <span className="text-lg mx-3">✨</span>
+        <span className="text-lg mx-3">🌷 💐 🌷</span>
         <span className="h-px w-16 bg-sage-300/40" />
       </div>
 
@@ -194,7 +197,7 @@ export default function App() {
       {/* Visual Floral Separator Line */}
       <div className="w-full flex items-center justify-center py-6 bg-gradient-to-b from-[#E7ECE6] to-[#FAF9F5] select-none text-sage-300">
         <span className="h-px w-16 bg-sage-300/30" />
-        <span className="text-lg mx-3">🌹</span>
+        <span className="text-lg mx-3">🌹 💐 🌹</span>
         <span className="h-px w-16 bg-sage-300/30" />
       </div>
 

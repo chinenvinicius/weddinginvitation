@@ -67,17 +67,17 @@ export const weddingParty: WeddingPartyList = {
   groomsmen: [
     "Cleverson Okada",
     "Vitor Felipe Chinen",
-    "Yajiro Soejima",
+    "Yajiro Soejima Jr.",
     "Darryl Gem Cuyos",
     "Donuel Soejima",
     "Ernest John Seraspe",
     "Zoe Jigs Montero",
-    "Ojie Cuyos"
+    "Ojie Hananiel Cuyos"
   ],
   flowerMaidens: [
     "Krisha Mae Vasquez",
     "Princess Jheuel Soejima",
-    "Sheena Alyajinna Soejima",
+    "Sheena Alyajnna Soejima",
     "Vina Aisha Yuri Madamba",
     "Joana Yukari Okada",
     "Rebeca Yurika Okada"
