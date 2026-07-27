@@ -15,7 +15,7 @@ function makeTex(draw,w,h,rx,ry){
   const x=c.getContext('2d'); draw(x,w,h);
   const t=new THREE.CanvasTexture(c);
   t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(rx||1,ry||1);
-  t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=8; return t;
+  t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=4; return t;
 }
 const texStucco=()=>makeTex(function(x,w,h){
   x.fillStyle="#ccb795"; x.fillRect(0,0,w,h);
@@ -222,7 +222,7 @@ function winFramed(x,y,z){
 function winFramedRow(x0,y,z,n,dx){for(let i=0;i<n;i++)winFramed(x0+i*dx,y,z);}
 function organicBlobGeometry(radius,sx,sy,sz){
   // weld duplicated verts (PolyhedronGeometry is non-indexed) so normals smooth instead of faceting
-  const g=mergeVertices(new THREE.IcosahedronGeometry(radius,3));
+  const g=mergeVertices(new THREE.IcosahedronGeometry(radius,2));
   const p=g.attributes.position;
   const ph=rnd(0,7);
   for(let i=0;i<p.count;i++){
@@ -286,7 +286,7 @@ function tree(x,z,h){
     f.castShadow=true; f.receiveShadow=true; tg.add(f);
   });
   const leafMats=[M.leafMid,M.leafLight,M.leafDark];
-  for(let i=0;i<18;i++){
+  for(let i=0;i<10;i++){
     const a=Math.random()*Math.PI*2;
     const rr=h*rnd(0.12,0.42);
     const y=trunkH+h*rnd(0.08,0.48);
@@ -316,7 +316,7 @@ function init(){
   camera.position.set(-26,16,34);
 
   renderer=new THREE.WebGLRenderer({antialias:true});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -328,7 +328,7 @@ function init(){
 
   scene.add(new THREE.HemisphereLight(0xdcefff,0x6c7f54,0.55));
   const sun=new THREE.DirectionalLight(0xffedc9,2.2); sun.position.set(24,34,20);
-  sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
+  sun.castShadow=true; sun.shadow.mapSize.set(1024,1024);
   sun.shadow.camera.near=1; sun.shadow.camera.far=150;
   sun.shadow.camera.left=-48; sun.shadow.camera.right=48; sun.shadow.camera.top=48; sun.shadow.camera.bottom=-48;
   sun.shadow.bias=-0.0005; sun.shadow.normalBias=0.03; scene.add(sun);
@@ -813,7 +813,7 @@ function loop(){
   renderer.render(scene,camera);
 }
 function vh(){ return window.innerHeight || document.documentElement.clientHeight || 0; }
-function inView(){ const r=container.getBoundingClientRect(); const H=vh(); return H>0 && r.top < H*0.95 && r.bottom > H*0.05; }
+function inView(){ const r=container.getBoundingClientRect(); const H=vh(); return H>0 && r.top < H+700 && r.bottom > -700; }
 function start(){
   if(!started){ try{ init(); }catch(err){ console.error('venue3d init failed',err); return; } }
   if(!running){ running=true; loop(); }
@@ -826,7 +826,7 @@ let io;
 try{
   io=new IntersectionObserver(function(es){
     es.forEach(function(e){ if(e.isIntersecting) start(); else stop(); });
-  },{threshold:0.05});
+  },{rootMargin:'700px 0px',threshold:0.01});
   io.observe(container);
 }catch(e){}
 maybeStart();

@@ -115,14 +115,14 @@ export const programRoles: ProgramRoles = {
   officiatingMinister: "Ptr. Guenjie Imayuki",
   emcee: "Melchie U. Salvan",
   singers: [
-    "Shaira Delos Reyes",
     "John Mark Monsing",
-    "Neovy love Soejima"
+    "Neovy love Soejima",
+    "Sheena Claire Soejima"
   ],
   programCoordinator: "Mary Jane O. Nakano",
   usherettes: [
-    "Shaina Sweet Delos Reyes",
-    "Ivy Ababa",
+    "Greshell Soejima",
+    "Roxan Sumacot",
     "Lyndi Lee Cuyos"
   ]
 };

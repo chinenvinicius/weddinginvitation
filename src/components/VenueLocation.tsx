@@ -5,7 +5,6 @@
 
 import { useEffect, useRef } from 'react';
 import { MapPin, Move3d } from 'lucide-react';
-import { initVenue3D } from '../3d-map';
 import { useI18n } from '../i18n';
 
 const MAP_URL = 'https://www.google.com/maps/search/?api=1&query=Aeru+Kikugawa+Cultural+Hall+Shizuoka';
@@ -16,8 +15,18 @@ export default function VenueLocation() {
 
   useEffect(() => {
     if (!containerRef.current) return;
-    const dispose = initVenue3D(containerRef.current);
-    return () => dispose?.();
+    const container = containerRef.current;
+    let cancelled = false;
+    let dispose: (() => void) | undefined;
+
+    import('../3d-map').then(({ initVenue3D }) => {
+      if (!cancelled) dispose = initVenue3D(container);
+    });
+
+    return () => {
+      cancelled = true;
+      dispose?.();
+    };
   }, []);
 
   return (
