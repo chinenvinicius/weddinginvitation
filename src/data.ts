@@ -17,7 +17,7 @@ export const brideParents: Parent[] = [
 
 export const principalSponsors: Sponsor[] = [
   { number: 1, name: "Mr. and Mrs. Peter Salvan" },
-  { number: 2, name: "Mr. and Mrs. Jerry Cuyos" },
+  { number: 2, name: "Mr. and Mrs. Jeremias Cuyos" },
   { number: 3, name: "Mr. and Mrs. Jonel Seraspe" },
   { number: 4, name: "Mr. and Mrs. Bhots Montero" },
   { number: 5, name: "Mr. and Mrs. Eleazar Illustrisimo" },
