@@ -45,7 +45,7 @@ export default function InvitationCover({ onNavigateToNext, opened }: Invitation
       {/* Visible hero background image with a soft tint for readable foreground content */}
       <div
         className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-55"
-        style={{ backgroundImage: `url('/photos/d.jpg')` }}
+        style={{ backgroundImage: `url('/photos/d.webp')` }}
       />
       <div className="absolute inset-0 bg-[#E7ECE6]/45 pointer-events-none" />
 

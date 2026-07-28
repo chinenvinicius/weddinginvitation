@@ -44,7 +44,7 @@ export default function EnvelopeIntro({ onOpen }: EnvelopeIntroProps) {
     >
       <div
         className="absolute inset-0 bg-cover bg-center opacity-40"
-        style={{ backgroundImage: `url('/photos/d.jpg')` }}
+        style={{ backgroundImage: `url('/photos/d.webp')` }}
         aria-hidden="true"
       />
       <div className="absolute inset-0 bg-[#E7ECE6]/55" aria-hidden="true" />

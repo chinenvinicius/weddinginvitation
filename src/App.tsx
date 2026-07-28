@@ -56,7 +56,7 @@ export default function App() {
       {/* Full App Subtle Watercolor Paper Texture Background Overlay */}
       <div 
         className="absolute inset-0 bg-cover bg-repeat pointer-events-none opacity-[0.05] mix-blend-multiply z-0" 
-        style={{ backgroundImage: 'url("/photos/d.jpg")' }} 
+        style={{ backgroundImage: 'url("/photos/d.webp")' }} 
       />
 
       {/* 1. Header / Navigation Initials Indicator (Centered Minimalist Aesthetic, No heavy sidebars/menus) */}
