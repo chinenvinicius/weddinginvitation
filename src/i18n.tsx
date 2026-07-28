@@ -44,7 +44,7 @@ export const translations = {
     entourageQuote: '"An entourage of souls, helping guide their path of eternity."',
     adultsTab: 'Bridesmaids & Groomsmen',
     childrenTab: 'Bearers & Little Treasures',
-    bridesmaid: 'Bridesmaid',
+    bridesmaid: 'Bridesmaids',
     bridesmaidSub: 'Standing with the Bride',
     groomsmen: 'Groomsmen',
     groomsmenSub: 'Standing with the Groom',
