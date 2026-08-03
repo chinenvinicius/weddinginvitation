@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS submissions (
 
   -- Audit and privacy details captured when the guest submits the form.
   language_code VARCHAR(5) NOT NULL DEFAULT 'en',
+  source_language_code VARCHAR(12) NOT NULL DEFAULT 'unknown',
+  translations_json LONGTEXT NOT NULL,
   consent_to_publish BOOLEAN NOT NULL DEFAULT FALSE,
 
   -- Moderation lifecycle. The application validates the allowed values.
@@ -53,4 +55,23 @@ INSERT INTO guestbook_settings
   (id, submissions_open_at, submissions_close_at)
 VALUES
   (1, '2026-08-12 00:00:00', '2026-08-13 00:00:00')
+ON DUPLICATE KEY UPDATE id = id;
+
+-- Translation provider configuration. API keys are encrypted by the backend
+-- before storage; plaintext keys are never returned to the browser.
+CREATE TABLE IF NOT EXISTS translation_settings (
+  id TINYINT NOT NULL PRIMARY KEY,
+  enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  provider VARCHAR(20) NOT NULL DEFAULT 'openrouter',
+  model VARCHAR(160) NOT NULL DEFAULT '',
+  base_url VARCHAR(500) NOT NULL DEFAULT 'https://ollama.com',
+  api_keys_encrypted LONGTEXT NOT NULL,
+  key_cursor INT NOT NULL DEFAULT 0,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+INSERT INTO translation_settings
+  (id, enabled, provider, model, base_url, api_keys_encrypted, key_cursor)
+VALUES
+  (1, FALSE, 'openrouter', '', 'https://ollama.com', '', 0)
 ON DUPLICATE KEY UPDATE id = id;

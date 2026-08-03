@@ -3,6 +3,7 @@ import { File as NodeFile } from 'node:buffer';
 import test from 'node:test';
 import { onRequest } from '../functions/api/[[path]]';
 import worker from '../worker';
+import { decryptApiKeys, encryptApiKeys, translateWithRotation } from '../functions/api/translation';
 
 Object.defineProperty(globalThis, 'File', { value: NodeFile });
 
@@ -111,4 +112,34 @@ test('worker delegates page requests to static assets', async () => {
   });
 
   assert.equal(await response.text(), 'wedding invitation');
+});
+
+test('translation API keys are encrypted at rest and can be recovered', async () => {
+  const keys = ['first-key', 'second-key'];
+  const encrypted = await encryptApiKeys(keys, env.ADMIN_TOKEN);
+
+  assert.equal(encrypted.includes(keys[0]), false);
+  assert.deepEqual(await decryptApiKeys(encrypted, env.ADMIN_TOKEN), keys);
+});
+
+test('translation retries with the next API key', async () => {
+  const originalFetch = globalThis.fetch;
+  const usedKeys: string[] = [];
+  globalThis.fetch = async (_input, init) => {
+    usedKeys.push(new Headers(init?.headers).get('Authorization') ?? '');
+    if (usedKeys.length === 1) return Response.json({ error: { message: 'rate limited' } }, { status: 429 });
+    return Response.json({ choices: [{ message: { content: JSON.stringify({
+      sourceLanguage: 'en',
+      translations: { en: 'Welcome!', ja: 'ようこそ！', ceb: 'Maayong pag-abot!', tl: 'Maligayang pagdating!', pt: 'Bem-vindo!' },
+    }) } }] });
+  };
+
+  try {
+    const result = await translateWithRotation({ provider: 'nvidia', model: 'test', baseUrl: '', apiKeys: ['one', 'two'], startAt: 0, message: 'Welcome!' });
+    assert.deepEqual(usedKeys, ['Bearer one', 'Bearer two']);
+    assert.equal(result.translations.en, 'Welcome!');
+    assert.equal(result.nextKey, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

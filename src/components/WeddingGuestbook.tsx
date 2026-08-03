@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Camera, Check, Eye, Heart, ImagePlus, LoaderCircle, LockKeyhole, Maximize2, MessageCircleHeart, MonitorPlay, Send, ShieldCheck, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, Camera, Check, Eye, Heart, ImagePlus, Languages, LoaderCircle, LockKeyhole, Maximize2, MessageCircleHeart, MonitorPlay, RefreshCw, Send, ShieldCheck, Sparkles, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Language, useI18n } from '../i18n';
 
@@ -9,6 +9,8 @@ interface GalleryPost {
   message: string;
   photos: { url: string }[];
   createdAt: string;
+  sourceLanguage: string;
+  translations: Record<string, string>;
 }
 
 interface AdminSubmission {
@@ -18,6 +20,8 @@ interface AdminSubmission {
   photos: { url: string }[];
   status: 'pending' | 'approved' | 'featured' | 'rejected';
   createdAt: string;
+  sourceLanguage: string;
+  translations: Record<string, string>;
 }
 
 interface GuestbookSchedule {
@@ -38,6 +42,24 @@ interface AdminSettings {
   wallOpenAt: string;
   wallCloseAt: string;
 }
+
+type TranslationProvider = 'openrouter' | 'nvidia' | 'gemini' | 'ollama';
+
+interface TranslationAdminSettings {
+  enabled: boolean;
+  provider: TranslationProvider;
+  model: string;
+  baseUrl: string;
+  apiKeyCount: number;
+}
+
+const translationLanguageNames: Record<string, string> = {
+  en: 'English',
+  ja: '日本語',
+  ceb: 'Bisaya',
+  tl: 'Tagalog',
+  pt: 'Português',
+};
 
 async function readApiJson<T>(response: Response): Promise<T> {
   if (!response.headers.get('content-type')?.includes('application/json')) {
@@ -307,6 +329,31 @@ function GuestForm({ eventCode }: { eventCode: string }) {
   );
 }
 
+function TranslatedMessage({ post, className, dark = false }: { post: GalleryPost; className: string; dark?: boolean }) {
+  const [language, setLanguage] = useState('original');
+  const available = Object.entries(post.translations ?? {}).filter((entry): entry is [string, string] => Boolean(translationLanguageNames[entry[0]]) && typeof entry[1] === 'string');
+  const message = language === 'original' ? post.message : post.translations[language] ?? post.message;
+  useEffect(() => setLanguage('original'), [post.id]);
+
+  return (
+    <>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.p key={language} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className={className}>“{message}”</motion.p>
+      </AnimatePresence>
+      {available.length > 0 && (
+        <label className={`mt-4 inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.12em] ${dark ? 'border-white/25 bg-black/20 text-white' : 'border-sage-200 bg-sage-50 text-sage-600'}`}>
+          <Languages className="h-3.5 w-3.5" />
+          <span className="sr-only">Message language</span>
+          <select value={language} onChange={(event) => setLanguage(event.target.value)} className="max-w-32 cursor-pointer bg-transparent outline-none">
+            <option value="original">Original</option>
+            {available.filter(([code]) => code !== post.sourceLanguage).map(([code]) => <option key={code} value={code}>{translationLanguageNames[code]}</option>)}
+          </select>
+        </label>
+      )}
+    </>
+  );
+}
+
 function WeddingWall({ compact = false, projector = false }: { compact?: boolean; projector?: boolean }) {
   const { language } = useI18n();
   const text = copy[language];
@@ -387,7 +434,7 @@ function WeddingWall({ compact = false, projector = false }: { compact?: boolean
               <p className="font-montserrat text-[11px] font-bold uppercase tracking-[0.28em] text-wine-600">A message from</p>
               <h2 className="mt-2 font-script text-5xl text-sage-900 lg:text-6xl">{post.guestName}</h2>
               <Heart className="mt-8 h-6 w-6 fill-wine-100 text-wine-500" />
-              <p className={`mt-5 font-serif italic leading-relaxed text-sage-800 ${post.photos.length === 0 ? 'text-5xl lg:text-6xl' : 'text-3xl lg:text-4xl'}`}>“{post.message}”</p>
+              <TranslatedMessage post={post} className={`mt-5 font-serif italic leading-relaxed text-sage-800 ${post.photos.length === 0 ? 'text-5xl lg:text-6xl' : 'text-3xl lg:text-4xl'}`} />
               <div className={`mt-10 flex items-center justify-between gap-10 border-t border-sage-200 pt-4 font-montserrat text-[10px] font-bold uppercase tracking-[0.18em] text-sage-500 ${post.photos.length === 0 ? 'w-full max-w-2xl' : ''}`}><span>Vinicius & Irish · 08.12.26</span><span>{activePost + 1} / {posts.length}</span></div>
             </div>
           </motion.article>
@@ -432,7 +479,7 @@ function WeddingWall({ compact = false, projector = false }: { compact?: boolean
                 )}
                 <div className={`relative z-10 flex w-full flex-col justify-center ${quoteFeature ? 'items-center px-7 py-10 text-center sm:px-14' : imageFeature ? 'p-7 sm:max-w-4xl sm:p-10' : 'p-5'}`}>
                   <Heart className={`h-4 w-4 ${quoteFeature || imageFeature ? 'fill-wine-300/20 text-wine-200' : 'fill-wine-100 text-wine-500'}`} />
-                  <p className={`mt-3 font-serif italic leading-relaxed ${quoteFeature ? 'max-w-4xl text-3xl text-white sm:text-4xl' : imageFeature ? 'text-2xl text-white drop-shadow-sm sm:text-4xl' : 'text-lg text-sage-800'}`}>“{post.message}”</p>
+                  <TranslatedMessage post={post} dark={quoteFeature || imageFeature} className={`mt-3 font-serif italic leading-relaxed ${quoteFeature ? 'max-w-4xl text-3xl text-white sm:text-4xl' : imageFeature ? 'text-2xl text-white drop-shadow-sm sm:text-4xl' : 'text-lg text-sage-800'}`} />
                   <div className={`mt-5 flex w-full items-center justify-between gap-3 border-t pt-3 ${quoteFeature ? 'max-w-2xl border-white/15' : imageFeature ? 'border-white/25' : 'border-sage-100'}`}><span className={`font-montserrat text-[9px] font-bold uppercase tracking-[0.16em] ${quoteFeature || imageFeature ? 'text-white' : 'text-sage-600'}`}>{post.guestName}</span><time className={`text-[9px] ${quoteFeature || imageFeature ? 'text-white/70' : 'text-sage-400'}`}>{new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time></div>
                 </div>
               </motion.article>
@@ -487,6 +534,11 @@ function AdminPanel() {
     wallOpenAt: '',
     wallCloseAt: '',
   });
+  const [translationSettings, setTranslationSettings] = useState<TranslationAdminSettings>({ enabled: false, provider: 'openrouter', model: '', baseUrl: 'https://ollama.com', apiKeyCount: 0 });
+  const [translationKeys, setTranslationKeys] = useState('');
+  const [translationModels, setTranslationModels] = useState<string[]>([]);
+  const [savingTranslation, setSavingTranslation] = useState(false);
+  const [loadingModels, setLoadingModels] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [savingSchedule, setSavingSchedule] = useState(false);
   const [error, setError] = useState('');
@@ -499,7 +551,7 @@ function AdminPanel() {
     if (!silent) setError('');
     try {
       const response = await fetch('/api/admin/submissions', { headers: { Authorization: `Bearer ${credential}` } });
-      const result = await readApiJson<{ submissions?: AdminSubmission[]; settings?: { autoApprove?: boolean; submissionsOpenAt?: string | null; submissionsCloseAt?: string | null; wallOpenAt?: string | null; wallCloseAt?: string | null }; error?: string }>(response);
+      const result = await readApiJson<{ submissions?: AdminSubmission[]; settings?: { autoApprove?: boolean; submissionsOpenAt?: string | null; submissionsCloseAt?: string | null; wallOpenAt?: string | null; wallCloseAt?: string | null }; translationSettings?: TranslationAdminSettings | null; error?: string }>(response);
       if (!response.ok) throw new Error(result.error ?? 'Could not load submissions.');
       const nextSubmissions = result.submissions ?? [];
       if (knownSubmissionIds.current) setNewSubmissionIds(nextSubmissions.filter((item) => !knownSubmissionIds.current?.has(item.id)).map((item) => item.id));
@@ -515,6 +567,7 @@ function AdminPanel() {
         wallOpenAt: toLocalInput(result.settings?.wallOpenAt),
         wallCloseAt: toLocalInput(result.settings?.wallCloseAt),
       });
+      if (result.translationSettings) setTranslationSettings(result.translationSettings);
     } catch (loadError) {
       if (loadError instanceof Error && loadError.message === 'Unauthorized.') {
         sessionStorage.removeItem('wedding-admin-token');
@@ -600,6 +653,45 @@ function AdminPanel() {
     }
   };
 
+  const saveTranslation = async () => {
+    setSavingTranslation(true);
+    setError('');
+    try {
+      const keys = translationKeys.split(/[\n,]+/).map((key) => key.trim()).filter(Boolean);
+      const response = await fetch('/api/admin/translation-settings', {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...translationSettings,
+          ...(keys.length > 0 ? { apiKeys: keys } : {}),
+        }),
+      });
+      const result = await readApiJson<{ error?: string }>(response);
+      if (!response.ok) throw new Error(result.error ?? 'Translation settings could not be saved.');
+      setTranslationSettings((current) => ({ ...current, apiKeyCount: keys.length || current.apiKeyCount }));
+      setTranslationKeys('');
+    } catch (translationError) {
+      setError(translationError instanceof Error ? translationError.message : 'Translation settings could not be saved.');
+    } finally {
+      setSavingTranslation(false);
+    }
+  };
+
+  const loadTranslationModels = async () => {
+    setLoadingModels(true);
+    setError('');
+    try {
+      const response = await fetch('/api/admin/translation-models', { headers: { Authorization: `Bearer ${token}` } });
+      const result = await readApiJson<{ models?: string[]; error?: string }>(response);
+      if (!response.ok) throw new Error(result.error ?? 'Models could not be loaded.');
+      setTranslationModels(result.models ?? []);
+    } catch (modelError) {
+      setError(modelError instanceof Error ? modelError.message : 'Models could not be loaded.');
+    } finally {
+      setLoadingModels(false);
+    }
+  };
+
   if (!token || error === 'Unauthorized.') {
     return (
       <div className="mx-auto max-w-md rounded-3xl border border-sage-200 bg-white/80 p-7 shadow-xl">
@@ -654,6 +746,33 @@ function AdminPanel() {
           <span className="absolute left-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
         </span>
       </label>
+      <section className="mt-5 rounded-2xl border border-sage-200/80 bg-white/75 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div><div className="flex items-center gap-2"><Languages className="h-4 w-4 text-wine-600" /><h3 className="font-serif text-xl font-semibold text-sage-900">AI translation</h3></div><p className="mt-1 max-w-2xl text-xs leading-relaxed text-sage-500">Create English, Japanese, Bisaya, Tagalog, and Portuguese versions before a message is published. The original always appears first.</p></div>
+          <label className="relative inline-flex shrink-0 cursor-pointer items-center">
+            <input type="checkbox" role="switch" checked={translationSettings.enabled} onChange={(event) => setTranslationSettings((current) => ({ ...current, enabled: event.target.checked }))} className="peer sr-only" />
+            <span className="h-6 w-11 rounded-full bg-sage-200 transition peer-checked:bg-sage-700 peer-focus-visible:ring-4 peer-focus-visible:ring-sage-200" />
+            <span className="absolute left-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
+          </label>
+        </div>
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600">Provider
+            <select value={translationSettings.provider} onChange={(event) => { setTranslationModels([]); setTranslationSettings((current) => ({ ...current, provider: event.target.value as TranslationProvider, model: '' })); }} className="rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500">
+              <option value="openrouter">OpenRouter</option><option value="nvidia">NVIDIA NIM</option><option value="gemini">Google Gemini</option><option value="ollama">Ollama / Ollama Cloud</option>
+            </select>
+          </label>
+          <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600">Model
+            <div className="flex gap-2"><input list="translation-models" required value={translationSettings.model} onChange={(event) => setTranslationSettings((current) => ({ ...current, model: event.target.value }))} placeholder="Select or enter a model" className="min-w-0 flex-1 rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500" /><button type="button" onClick={() => void loadTranslationModels()} disabled={loadingModels || translationSettings.apiKeyCount === 0} title="Load models from provider" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-sage-200 bg-white text-sage-600 transition hover:bg-sage-50 disabled:opacity-40"><RefreshCw className={`h-4 w-4 ${loadingModels ? 'animate-spin' : ''}`} /></button></div>
+            <datalist id="translation-models">{translationModels.map((model) => <option key={model} value={model} />)}</datalist>
+          </label>
+          {translationSettings.provider === 'ollama' && <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600 md:col-span-2">Ollama server URL<input type="url" value={translationSettings.baseUrl} onChange={(event) => setTranslationSettings((current) => ({ ...current, baseUrl: event.target.value }))} placeholder="https://ollama.com" className="rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500" /></label>}
+          <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600 md:col-span-2">API keys
+            <textarea rows={3} value={translationKeys} onChange={(event) => setTranslationKeys(event.target.value)} placeholder={translationSettings.apiKeyCount ? `${translationSettings.apiKeyCount} encrypted key${translationSettings.apiKeyCount === 1 ? '' : 's'} saved · leave empty to keep them` : 'Paste one API key per line'} className="resize-y rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-mono text-xs font-normal normal-case tracking-normal text-sage-800 outline-none placeholder:font-sans placeholder:text-sage-400 focus:border-sage-500" />
+            <span className="font-sans text-[11px] font-normal normal-case tracking-normal text-sage-500">New keys replace the saved pool. Keys are encrypted before storage and rotate automatically. If you change the admin token, enter the keys again.</span>
+          </label>
+        </div>
+        <div className="mt-4 flex items-center justify-between gap-4 border-t border-sage-100 pt-4"><span className="text-xs text-sage-500">{translationSettings.apiKeyCount} key{translationSettings.apiKeyCount === 1 ? '' : 's'} currently saved</span><button type="button" disabled={savingTranslation || (translationSettings.enabled && !translationSettings.model)} onClick={() => void saveTranslation()} className="rounded-full bg-sage-800 px-5 py-2.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.16em] text-white disabled:opacity-50">{savingTranslation ? 'Saving…' : 'Save translation'}</button></div>
+      </section>
       {error && <p role="alert" className="mt-5 rounded-xl bg-wine-50 p-4 text-wine-800">{error}</p>}
       <div className="mt-5 grid gap-3">
         <AnimatePresence initial={false}>
@@ -662,6 +781,7 @@ function AdminPanel() {
             <div className="min-w-0">
               <div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="font-serif text-2xl font-semibold text-sage-900">{submission.guestName}</h3><time className="font-montserrat text-[9px] uppercase tracking-wider text-sage-400">{new Date(submission.createdAt).toLocaleString()}</time></div><span className={`rounded-full px-2.5 py-1 font-montserrat text-[9px] font-bold uppercase tracking-wider ${submission.status === 'approved' ? 'bg-sage-100 text-sage-700' : submission.status === 'featured' ? 'bg-amber-100 text-amber-800' : submission.status === 'rejected' ? 'bg-wine-100 text-wine-800' : 'bg-stone-100 text-stone-600'}`}>{submission.status}</span></div>
               <p className="mt-3 whitespace-pre-wrap font-serif text-lg leading-relaxed text-sage-700">{submission.message}</p>
+              {Object.keys(submission.translations ?? {}).length > 0 && <details className="mt-3 rounded-xl bg-sage-50 px-4 py-3"><summary className="cursor-pointer font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600">View AI translations</summary><div className="mt-3 grid gap-3 sm:grid-cols-2">{Object.entries(submission.translations).filter(([code]) => code !== submission.sourceLanguage).map(([code, value]) => <div key={code}><p className="font-montserrat text-[8px] font-bold uppercase tracking-[0.14em] text-wine-600">{translationLanguageNames[code] ?? code}</p><p className="mt-1 whitespace-pre-wrap font-serif text-sm leading-relaxed text-sage-700">{value}</p></div>)}</div></details>}
               <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-sage-100 pt-4">
                 <button type="button" onClick={() => void moderate(submission.id, 'approved')} className="rounded-full bg-sage-700 px-4 py-2 font-montserrat text-[9px] font-bold uppercase tracking-wider text-white">Approve</button>
                 <button type="button" onClick={() => void moderate(submission.id, 'featured')} className="rounded-full border border-amber-300 px-4 py-2 font-montserrat text-[9px] font-bold uppercase tracking-wider text-amber-800">Feature</button>
