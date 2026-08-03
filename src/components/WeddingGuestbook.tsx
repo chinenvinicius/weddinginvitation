@@ -550,6 +550,7 @@ function AdminPanel() {
   const [translationKeys, setTranslationKeys] = useState('');
   const [translationModels, setTranslationModels] = useState<string[]>([]);
   const [savingTranslation, setSavingTranslation] = useState(false);
+  const [savingTranslationEnabled, setSavingTranslationEnabled] = useState(false);
   const [loadingModels, setLoadingModels] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [savingSchedule, setSavingSchedule] = useState(false);
@@ -713,9 +714,19 @@ function AdminPanel() {
     await loadTranslationModels();
   };
 
-  const toggleTranslation = (enabled: boolean) => {
-    setTranslationSettings((current) => ({ ...current, enabled }));
-    void fetch('/api/admin/translation-enabled', { method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }) });
+  const toggleTranslation = async (enabled: boolean) => {
+    setSavingTranslationEnabled(true);
+    setError('');
+    try {
+      const response = await fetch('/api/admin/translation-enabled', { method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }) });
+      const result = await readApiJson<{ error?: string }>(response);
+      if (!response.ok) throw new Error(result.error ?? 'Translation could not be updated.');
+      setTranslationSettings((current) => ({ ...current, enabled }));
+    } catch (translationError) {
+      setError(translationError instanceof Error ? translationError.message : 'Translation could not be updated.');
+    } finally {
+      setSavingTranslationEnabled(false);
+    }
   };
 
   if (!token || error === 'Unauthorized.') {
@@ -779,7 +790,7 @@ function AdminPanel() {
             <button type="button" aria-expanded={translationSettingsOpen} onClick={() => setTranslationSettingsOpen((open) => !open)} className="rounded-full border border-sage-300 bg-white px-4 py-2 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-700 transition hover:bg-sage-50">{translationSettingsOpen ? 'Hide settings' : 'Show settings'}</button>
             <label className="relative inline-flex shrink-0 cursor-pointer items-center" title={translationSettings.enabled ? 'AI translation is on' : 'AI translation is off'}>
               <span className="sr-only">Enable AI translation</span>
-              <input type="checkbox" role="switch" aria-label="Enable AI translation" checked={translationSettings.enabled} onChange={(event) => toggleTranslation(event.target.checked)} className="peer sr-only" />
+              <input type="checkbox" role="switch" aria-label="Enable AI translation" checked={translationSettings.enabled} disabled={savingTranslationEnabled} onChange={(event) => void toggleTranslation(event.target.checked)} className="peer sr-only" />
               <span className="h-6 w-11 rounded-full bg-sage-200 transition peer-checked:bg-sage-700 peer-focus-visible:ring-4 peer-focus-visible:ring-sage-200" />
               <span className="absolute left-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
             </label>

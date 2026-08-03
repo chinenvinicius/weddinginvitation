@@ -401,7 +401,11 @@ async function updateTranslationProvider(request: Request, env: Env) {
        ON DUPLICATE KEY UPDATE model = VALUES(model), base_url = VALUES(base_url), api_keys_encrypted = VALUES(api_keys_encrypted), priority = VALUES(priority), enabled = VALUES(enabled)`,
       [body.provider, body.model.trim(), body.baseUrl.trim(), encrypted, Math.max(1, Math.min(99, body.priority)), body.enabled],
     );
-    await database.execute('UPDATE translation_settings SET enabled = ? WHERE id = 1', [true]);
+    await database.execute(
+      `INSERT INTO translation_settings (id, enabled, provider, model, base_url, api_keys_encrypted, key_cursor)
+       VALUES (1, TRUE, 'openrouter', '', '', '', 0)
+       ON DUPLICATE KEY UPDATE enabled = TRUE`,
+    );
     return json({ ok: true });
   } catch (error) {
     console.error('Translation provider update failed', error);
@@ -415,9 +419,17 @@ async function updateTranslationEnabled(request: Request, env: Env) {
   if (!body || typeof body.enabled !== 'boolean') return json({ error: 'Invalid translation setting.' }, 400);
   try {
     const database = connect({ url: env.TIDB_DATABASE_URL });
-    await database.execute('UPDATE translation_settings SET enabled = ? WHERE id = 1', [body.enabled]);
+    await database.execute(
+      `INSERT INTO translation_settings (id, enabled, provider, model, base_url, api_keys_encrypted, key_cursor)
+       VALUES (1, ?, 'openrouter', '', '', '', 0)
+       ON DUPLICATE KEY UPDATE enabled = VALUES(enabled)`,
+      [body.enabled],
+    );
     return json({ ok: true });
-  } catch { return json({ error: 'Translation could not be updated.' }, 502); }
+  } catch (error) {
+    console.error('Translation enabled setting failed', error);
+    return json({ error: 'Translation could not be updated.' }, 502);
+  }
 }
 
 async function updateTranslationSettings(request: Request, env: Env) {
