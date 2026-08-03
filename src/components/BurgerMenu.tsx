@@ -28,6 +28,10 @@ export default function BurgerMenu({ items }: BurgerMenuProps) {
 
   const go = (id: string) => {
     setOpen(false);
+    if (id === 'admin') {
+      window.location.assign('/?admin=1');
+      return;
+    }
     requestAnimationFrame(() => {
       document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });

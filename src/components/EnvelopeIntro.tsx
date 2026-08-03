@@ -26,7 +26,7 @@ export default function EnvelopeIntro({ onOpen }: EnvelopeIntroProps) {
     if (opening) return;
     setOpening(true);
     // Reveal the invitation card after the flap finishes opening
-    const id = window.setTimeout(onOpen, 1000);
+    const id = window.setTimeout(onOpen, 1100);
     return () => window.clearTimeout(id);
   };
 
@@ -39,13 +39,16 @@ export default function EnvelopeIntro({ onOpen }: EnvelopeIntroProps) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-[#E7ECE6] overflow-hidden px-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: mounted ? 1 : 0 }}
-      transition={{ duration: 0.6 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: opening ? 0.5 : 0.6, ease: 'easeInOut' }}
       style={{ pointerEvents: opening ? 'none' : 'auto' }}
     >
-      <div
-        className="absolute inset-0 bg-cover bg-center opacity-40"
+      <motion.div
+        className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url('/photos/d.webp')` }}
         aria-hidden="true"
+        animate={{ opacity: opening ? 0 : mounted ? 0.4 : 0, scale: opening ? 1.08 : 1 }}
+        transition={{ duration: 0.6, ease: 'easeInOut' }}
       />
       <div className="absolute inset-0 bg-[#E7ECE6]/55" aria-hidden="true" />
 
@@ -55,12 +58,14 @@ export default function EnvelopeIntro({ onOpen }: EnvelopeIntroProps) {
         animate={{
           y: mounted ? 0 : 40,
           opacity: mounted ? 1 : 0,
-          scale: opening ? 1.08 : mounted ? 1 : 0.9,
+          scale: opening ? 1.12 : mounted ? 1 : 0.9,
+          filter: opening ? 'blur(6px)' : 'blur(0px)',
         }}
         transition={{
           y: { duration: 0.8, ease: 'easeOut', delay: 0.2 },
           opacity: { duration: 0.6, delay: 0.2 },
-          scale: { duration: opening ? 0.9 : 0.8, ease: opening ? [0.16, 1, 0.3, 1] : 'easeOut' },
+          scale: { duration: opening ? 1 : 0.8, ease: opening ? [0.16, 1, 0.3, 1] : 'easeOut' },
+          filter: { duration: 0.5, delay: opening ? 0.5 : 0 },
         }}
         onClick={handleOpen}
         role="button"

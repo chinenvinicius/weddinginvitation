@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Heart, MapPin, Calendar, Languages } from 'lucide-react';
 
 // Components
@@ -13,6 +13,7 @@ import BurgerMenu from './components/BurgerMenu';
 import EnvelopeIntro from './components/EnvelopeIntro';
 import InvitationCover from './components/InvitationCover';
 import PhotoGallery from './components/PhotoGallery';
+import WeddingGuestbook from './components/WeddingGuestbook';
 import SponsorsSec from './components/SponsorsSec';
 import WeddingParty from './components/WeddingParty';
 import CeremonyRoles from './components/CeremonyRoles';
@@ -21,16 +22,37 @@ import DetailsSec from './components/DetailsSec';
 import { I18nContext, Language, languages, translations } from './i18n';
 
 export default function App() {
+  const parameters = new URLSearchParams(window.location.search);
+  const guestbookMode = parameters.has('guestbook');
+  const adminMode = parameters.get('admin') === '1';
   const [language, setLanguage] = useState<Language>('en');
+  const [guestbookOpen, setGuestbookOpen] = useState(false);
   const t = translations[language];
   // References to scroll down from the hero CTA
   const detailsRef = useRef<HTMLDivElement | null>(null);
   // Envelope opening state — gates the reveal of the invitation card
-  const [opened, setOpened] = useState(false);
+  const [opened, setOpened] = useState(() => {
+    return guestbookMode || adminMode;
+  });
 
   useEffect(() => {
     document.documentElement.lang = languages.find((item) => item.code === language)?.htmlLang ?? 'en';
   }, [language]);
+
+  useEffect(() => {
+    if (guestbookMode || adminMode) return;
+    fetch('/api/schedule', { cache: 'no-store' })
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((schedule: { submissionsOpen?: boolean }) => setGuestbookOpen(Boolean(schedule.submissionsOpen)))
+      .catch(() => setGuestbookOpen(false));
+  }, [guestbookMode, adminMode]);
+
+  useEffect(() => {
+    const parameters = new URLSearchParams(window.location.search);
+    if (!parameters.has('guestbook') && parameters.get('admin') !== '1') return;
+    const timer = window.setTimeout(() => document.getElementById('section-guestbook')?.scrollIntoView(), 50);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const scrollToDetails = () => {
     detailsRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -39,12 +61,22 @@ export default function App() {
   const navItems = [
     { id: 'section-cover', label: t.navCover },
     { id: 'section-gallery', label: t.navGallery },
+    ...(guestbookOpen ? [{ id: 'section-guestbook', label: 'Share a memory' }] : []),
     { id: 'section-sponsors', label: t.navSponsors },
     { id: 'section-entourage', label: t.navEntourage },
     { id: 'section-ceremony', label: t.navCeremony },
     { id: 'section-location', label: t.navVenue },
     { id: 'section-details', label: t.navDetails },
+    { id: 'admin', label: 'Admin' },
   ];
+
+  if (guestbookMode || adminMode) {
+    return (
+      <I18nContext.Provider value={{ language, t }}>
+        <WeddingGuestbook />
+      </I18nContext.Provider>
+    );
+  }
 
   return (
     <I18nContext.Provider value={{ language, t }}>
@@ -114,7 +146,11 @@ export default function App() {
       <div className="h-16" />
 
       {/* Envelope opening overlay — shown until the user opens the invitation */}
-      {!opened && <EnvelopeIntro onOpen={() => setOpened(true)} />}
+      <AnimatePresence>
+        {!opened ? (
+          <EnvelopeIntro onOpen={() => setOpened(true)} />
+        ) : null}
+      </AnimatePresence>
 
       {/* 2. Invitation Main Cover (Slide 1) */}
       <section id="section-cover">
@@ -135,6 +171,9 @@ export default function App() {
       <section id="section-gallery">
         <PhotoGallery />
       </section>
+
+      {/* QR-only private message form plus the approved public wedding wall */}
+      <WeddingGuestbook />
 
       {/* Visual Floral Separator Line */}
       <div className="w-full flex items-center justify-center py-6 bg-gradient-to-b from-[#F3F4F1] to-[#F3F4F1] select-none text-sage-300">

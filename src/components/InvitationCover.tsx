@@ -13,6 +13,69 @@ interface InvitationCoverProps {
   opened: boolean;
 }
 
+const cardVariants = {
+  hidden: { opacity: 0, y: 120, scale: 0.85, rotateX: 35 },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    rotateX: 0,
+    transition: {
+      duration: 1.1,
+      ease: [0.16, 1, 0.3, 1],
+      delayChildren: 0.45,
+      staggerChildren: 0.08,
+    },
+  },
+};
+
+const contentContainerVariants = {
+  hidden: {},
+  show: {
+    transition: { staggerChildren: 0.12, delayChildren: 0.15 },
+  },
+};
+
+const namesContainerVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.16 } },
+};
+
+const riseItem = {
+  hidden: { opacity: 0, y: 28 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.75, ease: [0.16, 1, 0.3, 1] } },
+};
+
+const popItem = {
+  hidden: { opacity: 0, scale: 0.5, y: 12 },
+  show: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.8, ease: [0.34, 1.56, 0.64, 1] } },
+};
+
+const drawLine = {
+  hidden: { scaleX: 0, opacity: 0 },
+  show: { scaleX: 1, opacity: 1, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
+};
+
+const frameItem = {
+  hidden: { opacity: 0, scale: 0.96 },
+  show: { opacity: 1, scale: 1, transition: { duration: 0.9, ease: [0.16, 1, 0.3, 1] } },
+};
+
+const floralTopRight = {
+  hidden: { opacity: 0, scale: 0.4, rotate: -30 },
+  show: { opacity: 0.95, scale: 1, rotate: 0, transition: { duration: 1, ease: [0.16, 1, 0.3, 1] } },
+};
+
+const floralBottomLeft = {
+  hidden: { opacity: 0, scale: 0.4, rotate: 210 },
+  show: { opacity: 0.9, scale: 1, rotate: 180, transition: { duration: 1, ease: [0.16, 1, 0.3, 1] } },
+};
+
+const cornerVariant = (targetRotate: number) => ({
+  hidden: { opacity: 0, scale: 0, rotate: targetRotate - 60 },
+  show: { opacity: 1, scale: 1, rotate: targetRotate, transition: { duration: 0.7, ease: [0.34, 1.56, 0.64, 1] } },
+});
+
 export default function InvitationCover({ onNavigateToNext, opened }: InvitationCoverProps) {
   const { t } = useI18n();
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -41,7 +104,7 @@ export default function InvitationCover({ onNavigateToNext, opened }: Invitation
 
   return (
     <div className="relative min-h-[96vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-[#E7ECE6] overflow-hidden">
-      
+
       {/* Visible hero background image with a soft tint for readable foreground content */}
       <div
         className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-55"
@@ -57,10 +120,10 @@ export default function InvitationCover({ onNavigateToNext, opened }: Invitation
       {/* 2. Main Card Container (The Elegant Invitation Canvas — real paper stock look) */}
       <motion.div
         className="w-full max-w-5xl bg-transparent backdrop-blur-[2px] rounded-[2.5rem] shadow-[0_1px_2px_rgba(61,45,32,0.10),0_10px_22px_-10px_rgba(71,88,72,0.30),0_45px_90px_-30px_rgba(71,88,72,0.45),inset_0_1px_0_rgba(255,255,255,0.85)] border border-[#E9E2D2]/40 relative overflow-hidden p-6 sm:p-10 md:p-12"
-        initial={{ opacity: 0, y: 80, scale: 0.92, rotateX: 25 }}
-        animate={opened ? { opacity: 1, y: 0, scale: 1, rotateX: 0 } : { opacity: 0, y: 80, scale: 0.92, rotateX: 25 }}
-        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: opened ? 0.15 : 0 }}
-        style={{ transformOrigin: 'top center', transformPerspective: 1200 }}
+        variants={cardVariants}
+        initial="hidden"
+        animate={opened ? 'show' : 'hidden'}
+        style={{ transformOrigin: 'top center', transformPerspective: 1400 }}
       >
         {/* Paper fiber grain */}
         <div
@@ -74,103 +137,142 @@ export default function InvitationCover({ onNavigateToNext, opened }: Invitation
           className="absolute inset-0 pointer-events-none select-none"
           style={{ background: 'radial-gradient(ellipse at 50% 38%, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 45%, rgba(120,105,85,0.05) 100%)' }}
         />
-        <img
+        <motion.img
           src="/floral-frame.webp"
           alt=""
           aria-hidden="true"
-          className="absolute -top-24 -right-28 w-72 sm:w-[27rem] md:w-[32rem] opacity-95 pointer-events-none select-none z-10 drop-shadow-[0_18px_24px_rgba(61,23,26,0.16)]"
+          variants={floralTopRight}
+          className="absolute -top-24 -right-28 w-72 sm:w-[27rem] md:w-[32rem] pointer-events-none select-none z-10 drop-shadow-[0_18px_24px_rgba(61,23,26,0.16)]"
         />
-        <img
+        <motion.img
           src="/floral-frame.webp"
           alt=""
           aria-hidden="true"
-          className="absolute -bottom-28 -left-32 w-72 sm:w-[26rem] md:w-[31rem] rotate-180 opacity-90 pointer-events-none select-none z-10 drop-shadow-[0_18px_24px_rgba(61,23,26,0.14)]"
+          variants={floralBottomLeft}
+          className="absolute -bottom-28 -left-32 w-72 sm:w-[26rem] md:w-[31rem] pointer-events-none select-none z-10 drop-shadow-[0_18px_24px_rgba(61,23,26,0.14)]"
         />
-        
+
         {/* Double Border Frame */}
-        <div className="absolute inset-4 sm:inset-6 border border-[#D1C7BD]/45 rounded-[2rem] pointer-events-none z-10" />
-        <div className="absolute inset-[1.25rem] sm:inset-[1.75rem] border border-dashed border-[#D1C7BD]/25 rounded-[1.85rem] pointer-events-none z-10" />
+        <motion.div variants={frameItem} className="absolute inset-4 sm:inset-6 border border-[#D1C7BD]/45 rounded-[2rem] pointer-events-none z-10" />
+        <motion.div variants={frameItem} className="absolute inset-[1.25rem] sm:inset-[1.75rem] border border-dashed border-[#D1C7BD]/25 rounded-[1.85rem] pointer-events-none z-10" />
 
         {/* Vintage Gold Corner Ornaments */}
-        <div className="absolute top-[2rem] left-[2rem] w-8 h-8 pointer-events-none z-20 text-[#C4B29E]/70">
+        <motion.div variants={cornerVariant(0)} className="absolute top-[2rem] left-[2rem] w-8 h-8 pointer-events-none z-20 text-[#C4B29E]/70">
           <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="3" className="w-full h-full">
             <path d="M5 40 L5 5 C5 5, 40 5, 40 5" strokeLinecap="round" />
             <path d="M15 30 L15 15 C15 15, 30 15, 30 15" strokeLinecap="round" />
             <circle cx="5" cy="5" r="3" fill="currentColor" />
           </svg>
-        </div>
-        <div className="absolute top-[2rem] right-[2rem] w-8 h-8 pointer-events-none z-20 text-[#C4B29E]/70 rotate-90">
+        </motion.div>
+        <motion.div variants={cornerVariant(90)} className="absolute top-[2rem] right-[2rem] w-8 h-8 pointer-events-none z-20 text-[#C4B29E]/70">
           <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="3" className="w-full h-full">
             <path d="M5 40 L5 5 C5 5, 40 5, 40 5" strokeLinecap="round" />
             <path d="M15 30 L15 15 C15 15, 30 15, 30 15" strokeLinecap="round" />
             <circle cx="5" cy="5" r="3" fill="currentColor" />
           </svg>
-        </div>
-        <div className="absolute bottom-[2rem] left-[2rem] w-8 h-8 pointer-events-none z-20 text-[#C4B29E]/70 -rotate-90">
+        </motion.div>
+        <motion.div variants={cornerVariant(-90)} className="absolute bottom-[2rem] left-[2rem] w-8 h-8 pointer-events-none z-20 text-[#C4B29E]/70">
           <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="3" className="w-full h-full">
             <path d="M5 40 L5 5 C5 5, 40 5, 40 5" strokeLinecap="round" />
             <path d="M15 30 L15 15 C15 15, 30 15, 30 15" strokeLinecap="round" />
             <circle cx="5" cy="5" r="3" fill="currentColor" />
           </svg>
-        </div>
-        <div className="absolute bottom-[2rem] right-[2rem] w-8 h-8 pointer-events-none z-20 text-[#C4B29E]/70 rotate-180">
+        </motion.div>
+        <motion.div variants={cornerVariant(180)} className="absolute bottom-[2rem] right-[2rem] w-8 h-8 pointer-events-none z-20 text-[#C4B29E]/70">
           <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="3" className="w-full h-full">
             <path d="M5 40 L5 5 C5 5, 40 5, 40 5" strokeLinecap="round" />
             <path d="M15 30 L15 15 C15 15, 30 15, 30 15" strokeLinecap="round" />
             <circle cx="5" cy="5" r="3" fill="currentColor" />
           </svg>
-        </div>
+        </motion.div>
+
+        {/* Light sweep shine — plays once after the card settles */}
+        <motion.div
+          className="absolute inset-0 pointer-events-none z-[15] overflow-hidden rounded-[2.5rem]"
+          initial={{ opacity: 0 }}
+          animate={opened ? { opacity: 1 } : { opacity: 0 }}
+          transition={{ duration: 0.3, delay: 1.3 }}
+          aria-hidden="true"
+        >
+          <motion.div
+            className="absolute top-0 bottom-0 w-1/3 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-12"
+            initial={{ x: '-150%' }}
+            animate={opened ? { x: '450%' } : { x: '-150%' }}
+            transition={{ duration: 1.8, delay: 1.3, ease: 'easeInOut' }}
+          />
+        </motion.div>
 
         {/* 3. Centered Invitation Content (photos live in the Gallery section below) */}
         <div className="relative z-20 flex justify-center">
 
-        <div className="w-full max-w-2xl flex flex-col items-center justify-center text-center px-2 sm:px-4">
-          
+        <motion.div
+          className="w-full max-w-2xl flex flex-col items-center justify-center text-center px-2 sm:px-4"
+          variants={contentContainerVariants}
+        >
+
           {/* Top Intro Tag */}
-          <span className="font-serif text-[11px] sm:text-xs tracking-[0.28em] text-[#8D7A6C] font-semibold uppercase select-none">
+          <motion.span
+            variants={riseItem}
+            className="font-serif text-[11px] sm:text-xs tracking-[0.28em] text-[#8D7A6C] font-semibold uppercase select-none"
+          >
             {t.coverIntro}
-          </span>
+          </motion.span>
 
           {/* Delicate horizontal gold line ornament with a center diamond */}
-          <div className="flex items-center gap-2 w-32 my-3 select-none">
+          <motion.div variants={riseItem} className="flex items-center gap-2 w-32 my-3 select-none">
             <span className="h-[0.5px] bg-[#C4B29E]/50 flex-grow" />
             <span className="text-[7px] text-[#C4B29E]">◆</span>
             <span className="h-[0.5px] bg-[#C4B29E]/50 flex-grow" />
-          </div>
+          </motion.div>
 
           {/* Exquisite Overlapping Calligraphy & Name Title */}
-          <div className="relative w-full py-2 flex flex-col items-center select-none">
-            <h1 className="font-script text-6xl sm:text-8xl md:text-[5.5rem] lg:text-[6.2rem] text-[#3D171A] leading-[1.05] tracking-wide filter drop-shadow-sm font-medium">
+          <motion.div
+            variants={namesContainerVariants}
+            className="relative w-full py-2 flex flex-col items-center select-none"
+          >
+            <motion.h1
+              variants={popItem}
+              className="font-script text-6xl sm:text-8xl md:text-[5.5rem] lg:text-[6.2rem] text-[#3D171A] leading-[1.05] tracking-wide filter drop-shadow-sm font-medium"
+            >
               Vinicius
-            </h1>
-            
-            {/* Elegant gold ampersand with breathing room between names */}
-            <span className="font-serif italic font-light text-[#C5A059] text-6xl sm:text-7xl md:text-[4.75rem] my-1 sm:my-2 opacity-80 z-10 select-none block leading-none">
-              &
-            </span>
+            </motion.h1>
 
-            <h1 className="font-script text-6xl sm:text-8xl md:text-[5.5rem] lg:text-[6.2rem] text-[#3D171A] leading-[1.05] tracking-wide filter drop-shadow-sm font-medium">
+            {/* Elegant gold ampersand with breathing room between names */}
+            <motion.span
+              variants={popItem}
+              className="font-serif italic font-light text-[#C5A059] text-6xl sm:text-7xl md:text-[4.75rem] my-1 sm:my-2 opacity-80 z-10 select-none block leading-none"
+            >
+              &
+            </motion.span>
+
+            <motion.h1
+              variants={popItem}
+              className="font-script text-6xl sm:text-8xl md:text-[5.5rem] lg:text-[6.2rem] text-[#3D171A] leading-[1.05] tracking-wide filter drop-shadow-sm font-medium"
+            >
               Irish
-            </h1>
-          </div>
+            </motion.h1>
+          </motion.div>
 
           {/* Invitation Call Statement */}
-          <div className="flex flex-col gap-0.5 mt-2 select-none">
+          <motion.div variants={riseItem} className="flex flex-col gap-0.5 mt-2 select-none">
             <span className="font-serif text-[10px] sm:text-[11px] tracking-[0.22em] text-[#8D7A6C] uppercase">
               {t.inviteLine1}
             </span>
             <span className="font-serif text-xs sm:text-sm tracking-[0.18em] text-[#5C705D] font-bold uppercase">
               {t.inviteLine2}
             </span>
-          </div>
+          </motion.div>
 
           {/* Divider line */}
-          <div className="w-16 h-px bg-[#E5E2D6] my-5" />
-          <div className="flex flex-col items-center gap-1.5 select-none bg-white/35 px-6 py-4 rounded-2xl border border-sage-100/50">
+          <motion.div variants={drawLine} className="w-16 h-px bg-[#E5E2D6] my-5" style={{ transformOrigin: 'center' }} />
+          <motion.div
+            variants={riseItem}
+            className="flex flex-col items-center gap-1.5 select-none bg-white/35 px-6 py-4 rounded-2xl border border-sage-100/50"
+          >
             <span className="font-serif text-[10px] sm:text-xs tracking-[0.25em] text-[#8D7A6C] uppercase font-semibold">
               {t.weekday}
             </span>
-            
+
             {/* Recreated 08 | 12 | 26 Date Grid */}
             <div className="flex items-center gap-4 text-3xl sm:text-4xl font-serif text-[#3D171A] font-light py-1.5">
               <span>08</span>
@@ -183,10 +285,10 @@ export default function InvitationCover({ onNavigateToNext, opened }: Invitation
             <span className="font-serif text-[10px] sm:text-xs tracking-[0.2em] text-[#8D7A6C] uppercase">
               {t.time}
             </span>
-          </div>
+          </motion.div>
 
           {/* Venue & Location Block (Exactly as in Goyo scans) */}
-          <div className="mt-6 flex flex-col items-center select-none">
+          <motion.div variants={riseItem} className="mt-6 flex flex-col items-center select-none">
             <h2 className="font-serif font-bold text-lg sm:text-xl text-[#5C0612] tracking-[0.16em] uppercase leading-tight">
               Aeru Kikugawa
             </h2>
@@ -197,15 +299,21 @@ export default function InvitationCover({ onNavigateToNext, opened }: Invitation
               <p>2488-2 Honjo, Kikugawa</p>
               <p>Shizuoka 439-0018, Japan</p>
             </div>
-          </div>
+          </motion.div>
 
           {/* "Reception to follow" Elegant Cursive Suffix */}
-          <p className="font-script text-3xl sm:text-4xl text-[#C5A059] mt-5 mb-4 select-none">
+          <motion.p
+            variants={popItem}
+            className="font-script text-3xl sm:text-4xl text-[#C5A059] mt-5 mb-4 select-none"
+          >
             {t.reception}
-          </p>
+          </motion.p>
 
           {/* Countdown Module (Styled exquisitely in alignment) */}
-          <div className="w-full max-w-sm mt-3 bg-white/40 rounded-2xl p-3 border border-[#E5E2D6]/80 flex flex-col items-center gap-2">
+          <motion.div
+            variants={riseItem}
+            className="w-full max-w-sm mt-3 bg-white/40 rounded-2xl p-3 border border-[#E5E2D6]/80 flex flex-col items-center gap-2"
+          >
             <span className="font-montserrat text-[9px] uppercase font-bold tracking-[0.18em] text-[#8D7A6C] flex items-center gap-1">
               <Heart className="w-3 h-3 fill-[#8D7A6C] animate-pulse" /> {t.countdown}
             </span>
@@ -230,10 +338,10 @@ export default function InvitationCover({ onNavigateToNext, opened }: Invitation
                 <span className="font-montserrat text-[8px] uppercase tracking-wider text-sage-500">{t.secs}</span>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Navigation Action Button */}
-          <div className="mt-6">
+          <motion.div variants={riseItem} className="mt-6">
             <button
               type="button"
               onClick={onNavigateToNext}
@@ -242,9 +350,9 @@ export default function InvitationCover({ onNavigateToNext, opened }: Invitation
               {t.viewDetails}
               <ChevronDown className="w-3.5 h-3.5 group-hover:translate-y-0.5 transition-transform" />
             </button>
-          </div>
+          </motion.div>
 
-        </div>
+        </motion.div>
 
         </div>
 
