@@ -14,7 +14,13 @@ CREATE TABLE IF NOT EXISTS translation_providers (
 
 INSERT INTO translation_providers
   (provider, model, base_url, api_keys_encrypted, key_cursor, priority, enabled)
-SELECT provider, model, base_url, api_keys_encrypted, key_cursor, 1, TRUE
-FROM translation_settings
-WHERE id = 1 AND model <> '' AND api_keys_encrypted <> ''
-ON DUPLICATE KEY UPDATE provider = provider;
+SELECT ts.provider, ts.model, ts.base_url, ts.api_keys_encrypted, ts.key_cursor, 1, TRUE
+FROM translation_settings AS ts
+WHERE ts.id = 1 AND ts.model <> '' AND ts.api_keys_encrypted <> ''
+ON DUPLICATE KEY UPDATE
+  model = VALUES(model),
+  base_url = VALUES(base_url),
+  api_keys_encrypted = VALUES(api_keys_encrypted),
+  key_cursor = VALUES(key_cursor),
+  priority = VALUES(priority),
+  enabled = VALUES(enabled);
