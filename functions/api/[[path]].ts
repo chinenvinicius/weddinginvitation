@@ -38,6 +38,16 @@ interface TranslationSettingsRow {
   keyCursor: number | string;
 }
 
+interface TranslationProviderRow {
+  provider: TranslationProvider;
+  model: string;
+  baseUrl: string;
+  apiKeysEncrypted: string;
+  keyCursor: number | string;
+  priority: number | string;
+  enabled: number | string;
+}
+
 interface ScheduleRow {
   acceptanceState: 'upcoming' | 'open' | 'closed';
   wallState: 'upcoming' | 'open' | 'closed';
@@ -99,6 +109,21 @@ async function getTranslationSettingsIfInstalled(env: Env) {
   } catch (error) {
     if (/translation_settings.*(?:doesn't exist|not exist|unknown)/i.test(String(error))) return null;
     throw error;
+  }
+}
+
+async function getTranslationProviders(env: Env): Promise<TranslationProviderRow[]> {
+  const database = connect({ url: env.TIDB_DATABASE_URL });
+  try {
+    return await database.execute(
+      `SELECT provider, model, base_url AS baseUrl, api_keys_encrypted AS apiKeysEncrypted,
+              key_cursor AS keyCursor, priority, enabled
+       FROM translation_providers ORDER BY priority, provider`,
+    ) as TranslationProviderRow[];
+  } catch (error) {
+    if (!/translation_providers.*(?:doesn't exist|not exist|unknown)/i.test(String(error))) throw error;
+    const legacy = await getTranslationSettingsIfInstalled(env);
+    return legacy && legacy.model ? [{ ...legacy, priority: 1, enabled: 1 }] : [];
   }
 }
 
@@ -216,19 +241,27 @@ async function createSubmission(request: Request, env: Env) {
     try {
       const translationSettings = await getTranslationSettingsIfInstalled(env);
       if (translationSettings && Boolean(Number(translationSettings.enabled))) {
-        const apiKeys = await decryptApiKeys(translationSettings.apiKeysEncrypted, env.ADMIN_TOKEN);
-        if (!translationSettings.model || apiKeys.length === 0) return json({ error: 'Translation is enabled but its model or API keys are missing.' }, 503);
-        const result = await translateWithRotation({
-          provider: translationSettings.provider,
-          model: translationSettings.model,
-          baseUrl: translationSettings.baseUrl,
-          apiKeys,
-          startAt: Number(translationSettings.keyCursor) || 0,
-          message,
-        });
-        translation = result;
-        const translationDatabase = connect({ url: env.TIDB_DATABASE_URL });
-        await translationDatabase.execute('UPDATE translation_settings SET key_cursor = ? WHERE id = 1', [result.nextKey]);
+        const providers = await getTranslationProviders(env);
+        let lastProviderError: unknown;
+        for (const provider of providers) {
+          if (!Boolean(Number(provider.enabled))) continue;
+          try {
+            const apiKeys = await decryptApiKeys(provider.apiKeysEncrypted, env.ADMIN_TOKEN);
+            if (!provider.model || apiKeys.length === 0) continue;
+            const result = await translateWithRotation({ provider: provider.provider, model: provider.model, baseUrl: provider.baseUrl, apiKeys, startAt: Number(provider.keyCursor) || 0, message });
+            translation = result;
+            const translationDatabase = connect({ url: env.TIDB_DATABASE_URL });
+            try {
+              await translationDatabase.execute('UPDATE translation_providers SET key_cursor = ? WHERE provider = ?', [result.nextKey, provider.provider]);
+            } catch (cursorError) {
+              if (!/translation_providers.*(?:doesn't exist|not exist|unknown)/i.test(String(cursorError))) throw cursorError;
+              await translationDatabase.execute('UPDATE translation_settings SET key_cursor = ? WHERE id = 1', [result.nextKey]);
+            }
+            lastProviderError = null;
+            break;
+          } catch (error) { lastProviderError = error; }
+        }
+        if (lastProviderError || Object.keys(translation.translations).length === 0) throw lastProviderError ?? new Error('No configured translation provider is available.');
       }
     } catch (translationError) {
       console.error('Message translation failed', translationError);
@@ -318,11 +351,11 @@ async function getAdminSubmissions(request: Request, env: Env) {
     try {
       const translation = await getTranslationSettings(env);
       if (translation) {
-        const apiKeys = await decryptApiKeys(translation.apiKeysEncrypted, env.ADMIN_TOKEN);
-        translationSettings = {
-          enabled: Boolean(Number(translation.enabled)), provider: translation.provider, model: translation.model, baseUrl: translation.baseUrl,
-          apiKeys: apiKeys.map((key) => `••••${key.slice(-4)}`), apiKeyCount: apiKeys.length,
-        };
+        const providers = await getTranslationProviders(env);
+        translationSettings = { enabled: Boolean(Number(translation.enabled)), providers: await Promise.all(providers.map(async (provider) => {
+          const apiKeys = await decryptApiKeys(provider.apiKeysEncrypted, env.ADMIN_TOKEN);
+          return { provider: provider.provider, model: provider.model, baseUrl: provider.baseUrl, priority: Number(provider.priority), enabled: Boolean(Number(provider.enabled)), apiKeys: apiKeys.map((key) => `••••${key.slice(-4)}`), apiKeyCount: apiKeys.length };
+        })) };
       }
     } catch (translationError) {
       console.error('Translation settings query failed', translationError);
@@ -341,6 +374,44 @@ async function getAdminSubmissions(request: Request, env: Env) {
     console.error('Admin query failed', error);
     return json({ error: 'Submissions could not be loaded.' }, 502);
   }
+}
+
+async function updateTranslationProvider(request: Request, env: Env) {
+  if (!isAdmin(request, env)) return json({ error: 'Unauthorized.' }, 401);
+  let body: { provider?: unknown; model?: unknown; baseUrl?: unknown; priority?: unknown; enabled?: unknown; apiKeys?: unknown };
+  try { body = await request.json() as typeof body; } catch { return json({ error: 'Invalid provider settings.' }, 400); }
+  const providers = ['openrouter', 'nvidia', 'gemini', 'ollama', 'openai', 'groq', 'together', 'cerebras', 'deepinfra', 'openai-compatible'];
+  if (typeof body.provider !== 'string' || !providers.includes(body.provider) || typeof body.model !== 'string' || typeof body.baseUrl !== 'string' || typeof body.priority !== 'number' || typeof body.enabled !== 'boolean') return json({ error: 'Invalid provider settings.' }, 400);
+  if (body.apiKeys !== undefined && (!Array.isArray(body.apiKeys) || body.apiKeys.some((key) => typeof key !== 'string'))) return json({ error: 'Invalid API keys.' }, 400);
+  try {
+    const database = connect({ url: env.TIDB_DATABASE_URL });
+    const existing = await database.execute('SELECT api_keys_encrypted AS apiKeysEncrypted FROM translation_providers WHERE provider = ?', [body.provider]) as Array<{ apiKeysEncrypted: string }>;
+    const keys = (body.apiKeys as string[] | undefined)?.map((key) => key.trim()).filter(Boolean).slice(0, 20);
+    const encrypted = keys ? await encryptApiKeys(keys, env.ADMIN_TOKEN) : existing[0]?.apiKeysEncrypted ?? '';
+    if (!encrypted) return json({ error: 'Add at least one API key.' }, 400);
+    await database.execute(
+      `INSERT INTO translation_providers (provider, model, base_url, api_keys_encrypted, priority, enabled)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE model = VALUES(model), base_url = VALUES(base_url), api_keys_encrypted = VALUES(api_keys_encrypted), priority = VALUES(priority), enabled = VALUES(enabled)`,
+      [body.provider, body.model.trim(), body.baseUrl.trim(), encrypted, Math.max(1, Math.min(99, body.priority)), body.enabled],
+    );
+    await database.execute('UPDATE translation_settings SET enabled = ? WHERE id = 1', [true]);
+    return json({ ok: true });
+  } catch (error) {
+    console.error('Translation provider update failed', error);
+    return json({ error: 'Provider settings could not be saved. Run translation-providers-upgrade.sql first.' }, 502);
+  }
+}
+
+async function updateTranslationEnabled(request: Request, env: Env) {
+  if (!isAdmin(request, env)) return json({ error: 'Unauthorized.' }, 401);
+  const body = await request.json().catch(() => null) as { enabled?: unknown } | null;
+  if (!body || typeof body.enabled !== 'boolean') return json({ error: 'Invalid translation setting.' }, 400);
+  try {
+    const database = connect({ url: env.TIDB_DATABASE_URL });
+    await database.execute('UPDATE translation_settings SET enabled = ? WHERE id = 1', [body.enabled]);
+    return json({ ok: true });
+  } catch { return json({ error: 'Translation could not be updated.' }, 502); }
 }
 
 async function updateTranslationSettings(request: Request, env: Env) {
@@ -382,11 +453,19 @@ async function updateTranslationSettings(request: Request, env: Env) {
 async function getTranslationModels(request: Request, env: Env) {
   if (!isAdmin(request, env)) return json({ error: 'Unauthorized.' }, 401);
   try {
-    const settings = await getTranslationSettings(env);
-    if (!settings) return json({ error: 'Save translation settings first.' }, 400);
-    const keys = await decryptApiKeys(settings.apiKeysEncrypted, env.ADMIN_TOKEN);
+    const body = request.method === 'POST' ? await request.json() as { provider: TranslationProvider; baseUrl: string; apiKeys?: string[] } : null;
+    const settings = body ? null : await getTranslationSettings(env);
+    const provider = body?.provider ?? settings?.provider;
+    const baseUrl = body?.baseUrl ?? settings?.baseUrl ?? '';
+    let keys = body?.apiKeys?.map((key) => key.trim()).filter(Boolean) ?? [];
+    if (!keys.length && provider) {
+      const rows = await getTranslationProviders(env);
+      const saved = rows.find((row) => row.provider === provider);
+      if (saved) keys = await decryptApiKeys(saved.apiKeysEncrypted, env.ADMIN_TOKEN);
+    }
+    if (!provider) return json({ error: 'Choose a provider first.' }, 400);
     if (!keys.length) return json({ error: 'Add at least one API key first.' }, 400);
-    return json({ models: await listProviderModels(settings.provider, settings.baseUrl, keys[Number(settings.keyCursor) % keys.length]) });
+    return json({ models: await listProviderModels(provider, baseUrl, keys[0]) });
   } catch (error) {
     console.error('Translation model list failed', error);
     return json({ error: error instanceof Error ? error.message : 'Models could not be loaded.' }, 502);
@@ -474,6 +553,9 @@ export const onRequest = async ({ request, env }: FunctionContext): Promise<Resp
   if (request.method === 'PATCH' && parts.join('/') === 'admin/settings') return updateAdminSettings(request, env);
   if (request.method === 'PATCH' && parts.join('/') === 'admin/translation-settings') return updateTranslationSettings(request, env);
   if (request.method === 'GET' && parts.join('/') === 'admin/translation-models') return getTranslationModels(request, env);
+  if (request.method === 'POST' && parts.join('/') === 'admin/translation-models') return getTranslationModels(request, env);
+  if (request.method === 'PUT' && parts.join('/') === 'admin/translation-providers') return updateTranslationProvider(request, env);
+  if (request.method === 'PATCH' && parts.join('/') === 'admin/translation-enabled') return updateTranslationEnabled(request, env);
   if (request.method === 'PATCH' && parts[0] === 'admin' && parts[1] === 'submissions' && parts[2]) {
     return updateSubmission(request, env, parts[2]);
   }

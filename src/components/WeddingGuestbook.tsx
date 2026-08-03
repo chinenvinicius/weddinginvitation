@@ -47,12 +47,20 @@ type TranslationProvider = 'openrouter' | 'nvidia' | 'gemini' | 'ollama' | 'open
 
 interface TranslationAdminSettings {
   enabled: boolean;
+  providers: TranslationProviderConfig[];
+}
+
+interface TranslationProviderConfig {
   provider: TranslationProvider;
   model: string;
   baseUrl: string;
+  priority: number;
+  enabled: boolean;
   apiKeyCount: number;
   apiKeys?: string[];
 }
+
+const emptyTranslationProvider = (): TranslationProviderConfig => ({ provider: 'openrouter', model: '', baseUrl: 'https://ollama.com', priority: 1, enabled: true, apiKeyCount: 0, apiKeys: [] });
 
 const translationLanguageNames: Record<string, string> = {
   en: 'English',
@@ -535,7 +543,8 @@ function AdminPanel() {
     wallOpenAt: '',
     wallCloseAt: '',
   });
-  const [translationSettings, setTranslationSettings] = useState<TranslationAdminSettings>({ enabled: false, provider: 'openrouter', model: '', baseUrl: 'https://ollama.com', apiKeyCount: 0 });
+  const [translationSettings, setTranslationSettings] = useState<TranslationAdminSettings>({ enabled: false, providers: [] });
+  const [translationDraft, setTranslationDraft] = useState<TranslationProviderConfig>(emptyTranslationProvider);
   const [translationKeys, setTranslationKeys] = useState('');
   const [translationModels, setTranslationModels] = useState<string[]>([]);
   const [savingTranslation, setSavingTranslation] = useState(false);
@@ -568,7 +577,10 @@ function AdminPanel() {
         wallOpenAt: toLocalInput(result.settings?.wallOpenAt),
         wallCloseAt: toLocalInput(result.settings?.wallCloseAt),
       });
-      if (result.translationSettings) setTranslationSettings(result.translationSettings);
+      if (result.translationSettings) {
+        setTranslationSettings(result.translationSettings);
+        if (!silent) setTranslationDraft(result.translationSettings.providers[0] ?? emptyTranslationProvider());
+      }
     } catch (loadError) {
       if (loadError instanceof Error && loadError.message === 'Unauthorized.') {
         sessionStorage.removeItem('wedding-admin-token');
@@ -654,26 +666,25 @@ function AdminPanel() {
     }
   };
 
-  const saveTranslation = async () => {
+  const saveTranslationProvider = async () => {
     setSavingTranslation(true);
     setError('');
     try {
       const keys = translationKeys.split(/[\n,]+/).map((key) => key.trim()).filter(Boolean);
-      const response = await fetch('/api/admin/translation-settings', {
-        method: 'PATCH',
+      const response = await fetch('/api/admin/translation-providers', {
+        method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...translationSettings,
-          ...(keys.length > 0 ? { apiKeys: keys } : {}),
-        }),
+        body: JSON.stringify({ ...translationDraft, ...(keys.length > 0 ? { apiKeys: keys } : {}) }),
       });
       const result = await readApiJson<{ error?: string }>(response);
-      if (!response.ok) throw new Error(result.error ?? 'Translation settings could not be saved.');
-      setTranslationSettings((current) => ({ ...current, apiKeyCount: keys.length || current.apiKeyCount, apiKeys: keys.length ? keys.map((key) => `••••${key.slice(-4)}`) : current.apiKeys }));
+      if (!response.ok) throw new Error(result.error ?? 'Provider settings could not be saved.');
+      const saved = { ...translationDraft, apiKeyCount: keys.length || translationDraft.apiKeyCount, apiKeys: keys.length ? keys.map((key) => `••••${key.slice(-4)}`) : translationDraft.apiKeys };
+      setTranslationDraft(saved);
+      setTranslationSettings((current) => ({ enabled: true, providers: [...current.providers.filter((item) => item.provider !== saved.provider), saved].sort((a, b) => a.priority - b.priority) }));
       setTranslationKeys('');
       return true;
     } catch (translationError) {
-      setError(translationError instanceof Error ? translationError.message : 'Translation settings could not be saved.');
+      setError(translationError instanceof Error ? translationError.message : 'Provider settings could not be saved.');
       return false;
     } finally {
       setSavingTranslation(false);
@@ -684,7 +695,8 @@ function AdminPanel() {
     setLoadingModels(true);
     setError('');
     try {
-      const response = await fetch('/api/admin/translation-models', { headers: { Authorization: `Bearer ${token}` } });
+      const keys = translationKeys.split(/[\n,]+/).map((key) => key.trim()).filter(Boolean);
+      const response = await fetch('/api/admin/translation-models', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ provider: translationDraft.provider, baseUrl: translationDraft.baseUrl, ...(keys.length ? { apiKeys: keys } : {}) }) });
       const result = await readApiJson<{ models?: string[]; error?: string }>(response);
       if (!response.ok) throw new Error(result.error ?? 'Models could not be loaded.');
       setTranslationModels(result.models ?? []);
@@ -696,17 +708,12 @@ function AdminPanel() {
   };
 
   const saveAndLoadTranslationModels = async () => {
-    if (await saveTranslation()) await loadTranslationModels();
+    await loadTranslationModels();
   };
 
   const toggleTranslation = (enabled: boolean) => {
     setTranslationSettings((current) => ({ ...current, enabled }));
-    if (!enabled) {
-      void fetch('/api/admin/translation-settings', {
-        method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...translationSettings, enabled: false }),
-      });
-    }
+    void fetch('/api/admin/translation-enabled', { method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }) });
   };
 
   if (!token || error === 'Unauthorized.') {
@@ -774,23 +781,26 @@ function AdminPanel() {
         </div>
         <AnimatePresence initial={false}>
         {translationSettings.enabled && <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+        {translationSettings.providers.length > 0 && <div className="mt-5 grid gap-2 sm:grid-cols-2">{translationSettings.providers.map((item) => <button key={item.provider} type="button" onClick={() => { setTranslationDraft(item); setTranslationModels([]); setTranslationKeys(''); }} className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left transition ${item.provider === translationDraft.provider ? 'border-sage-600 bg-sage-50' : 'border-sage-200 bg-white hover:border-sage-400'}`}><span><span className="block font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-wine-600">Priority {item.priority}</span><span className="mt-1 block font-serif text-base text-sage-900">{item.provider} · {item.model || 'Choose model'}</span></span><span className="text-[10px] text-sage-500">{item.apiKeyCount} keys</span></button>)}</div>}
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600">Provider
-            <select value={translationSettings.provider} onChange={(event) => { const provider = event.target.value as TranslationProvider; setTranslationModels([]); setTranslationSettings((current) => ({ ...current, provider, model: '', baseUrl: provider === 'openai-compatible' ? '' : current.baseUrl })); }} className="rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500">
+            <select value={translationDraft.provider} onChange={(event) => { const provider = event.target.value as TranslationProvider; const saved = translationSettings.providers.find((item) => item.provider === provider); setTranslationModels([]); setTranslationKeys(''); setTranslationDraft(saved ?? { ...emptyTranslationProvider(), provider, priority: Math.max(0, ...translationSettings.providers.map((item) => item.priority)) + 1, baseUrl: provider === 'openai-compatible' ? '' : 'https://ollama.com' }); }} className="rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500">
               <option value="openrouter">OpenRouter</option><option value="nvidia">NVIDIA NIM</option><option value="gemini">Google Gemini</option><option value="openai">OpenAI</option><option value="groq">Groq</option><option value="together">Together AI</option><option value="cerebras">Cerebras</option><option value="deepinfra">DeepInfra</option><option value="ollama">Ollama / Ollama Cloud</option><option value="openai-compatible">Other OpenAI-compatible API</option>
             </select>
           </label>
           <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600">Model
-            <div className="flex gap-2">{translationModels.length > 0 ? <select required value={translationSettings.model} onChange={(event) => setTranslationSettings((current) => ({ ...current, model: event.target.value }))} className="min-w-0 flex-1 rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500"><option value="">Select from {translationModels.length} models</option>{translationModels.map((model) => <option key={model} value={model}>{model}</option>)}</select> : <input required value={translationSettings.model} onChange={(event) => setTranslationSettings((current) => ({ ...current, model: event.target.value }))} placeholder="Paste a key, then click refresh" className="min-w-0 flex-1 rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500" />}<button type="button" onClick={() => void saveAndLoadTranslationModels()} disabled={loadingModels || savingTranslation || (!translationKeys.trim() && translationSettings.apiKeyCount === 0)} title="Save API keys and load models" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-sage-200 bg-white text-sage-600 transition hover:bg-sage-50 disabled:opacity-40"><RefreshCw className={`h-4 w-4 ${loadingModels || savingTranslation ? 'animate-spin' : ''}`} /></button></div>
-            {translationModels.length > 0 && <span className="font-sans text-[11px] font-normal normal-case tracking-normal text-sage-500">{translationModels.length} models loaded from {translationSettings.provider}.</span>}
+            <div className="flex gap-2">{translationModels.length > 0 ? <select required value={translationDraft.model} onChange={(event) => setTranslationDraft((current) => ({ ...current, model: event.target.value }))} className="min-w-0 flex-1 rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500"><option value="">Select from {translationModels.length} models</option>{translationModels.map((model) => <option key={model} value={model}>{model}</option>)}</select> : <input required value={translationDraft.model} onChange={(event) => setTranslationDraft((current) => ({ ...current, model: event.target.value }))} placeholder="Paste a key, then click refresh" className="min-w-0 flex-1 rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500" />}<button type="button" onClick={() => void saveAndLoadTranslationModels()} disabled={loadingModels || savingTranslation || (!translationKeys.trim() && translationDraft.apiKeyCount === 0)} title="Load models" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-sage-200 bg-white text-sage-600 transition hover:bg-sage-50 disabled:opacity-40"><RefreshCw className={`h-4 w-4 ${loadingModels || savingTranslation ? 'animate-spin' : ''}`} /></button></div>
+            {translationModels.length > 0 && <span className="font-sans text-[11px] font-normal normal-case tracking-normal text-sage-500">{translationModels.length} models loaded from {translationDraft.provider}.</span>}
           </label>
-          {['ollama', 'openai-compatible'].includes(translationSettings.provider) && <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600 md:col-span-2">{translationSettings.provider === 'ollama' ? 'Ollama server URL' : 'OpenAI-compatible base URL'}<input type="url" value={translationSettings.baseUrl} onChange={(event) => setTranslationSettings((current) => ({ ...current, baseUrl: event.target.value }))} placeholder={translationSettings.provider === 'ollama' ? 'https://ollama.com' : 'https://provider.example/v1'} className="rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500" /></label>}
+          {['ollama', 'openai-compatible'].includes(translationDraft.provider) && <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600 md:col-span-2">{translationDraft.provider === 'ollama' ? 'Ollama server URL' : 'OpenAI-compatible base URL'}<input type="url" value={translationDraft.baseUrl} onChange={(event) => setTranslationDraft((current) => ({ ...current, baseUrl: event.target.value }))} placeholder={translationDraft.provider === 'ollama' ? 'https://ollama.com' : 'https://provider.example/v1'} className="rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500" /></label>}
+          <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600">Priority<input type="number" min="1" max="99" value={translationDraft.priority} onChange={(event) => setTranslationDraft((current) => ({ ...current, priority: Number(event.target.value) || 1 }))} className="rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500" /><span className="font-sans text-[11px] font-normal normal-case tracking-normal text-sage-500">1 runs first; higher numbers are fallbacks.</span></label>
+          <label className="flex items-center justify-between gap-4 rounded-xl border border-sage-200 bg-sage-50/60 px-4 py-3"><span><span className="block font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600">Use this provider</span><span className="mt-1 block text-[11px] text-sage-500">Disabled providers stay saved but are skipped.</span></span><input type="checkbox" checked={translationDraft.enabled} onChange={(event) => setTranslationDraft((current) => ({ ...current, enabled: event.target.checked }))} className="h-4 w-4 accent-sage-700" /></label>
           <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600 md:col-span-2">API keys
-            <textarea rows={3} value={translationKeys} onChange={(event) => setTranslationKeys(event.target.value)} placeholder={translationSettings.apiKeyCount ? `${translationSettings.apiKeyCount} encrypted key${translationSettings.apiKeyCount === 1 ? '' : 's'} saved · leave empty to keep them` : 'Paste one API key per line'} className="resize-y rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-mono text-xs font-normal normal-case tracking-normal text-sage-800 outline-none placeholder:font-sans placeholder:text-sage-400 focus:border-sage-500" />
+            <textarea rows={3} value={translationKeys} onChange={(event) => setTranslationKeys(event.target.value)} placeholder={translationDraft.apiKeyCount ? `${translationDraft.apiKeyCount} encrypted key${translationDraft.apiKeyCount === 1 ? '' : 's'} saved · leave empty to keep them` : 'Paste one API key per line'} className="resize-y rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-mono text-xs font-normal normal-case tracking-normal text-sage-800 outline-none placeholder:font-sans placeholder:text-sage-400 focus:border-sage-500" />
             <span className="font-sans text-[11px] font-normal normal-case tracking-normal text-sage-500">New keys replace the saved pool. Keys are encrypted before storage and rotate automatically. If you change the admin token, enter the keys again.</span>
           </label>
         </div>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-sage-100 pt-4"><div className="flex flex-wrap items-center gap-2"><span className="text-xs text-sage-500">{translationSettings.apiKeyCount} key{translationSettings.apiKeyCount === 1 ? '' : 's'} currently saved</span>{translationSettings.apiKeys?.map((key, index) => <span key={`${key}-${index}`} className="rounded-full border border-sage-200 bg-sage-50 px-2.5 py-1 font-mono text-[10px] text-sage-600">Key {index + 1} · {key}</span>)}</div><button type="button" disabled={savingTranslation || (translationSettings.enabled && !translationSettings.model)} onClick={() => void saveTranslation()} className="rounded-full bg-sage-800 px-5 py-2.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.16em] text-white disabled:opacity-50">{savingTranslation ? 'Saving…' : 'Save translation'}</button></div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-sage-100 pt-4"><div className="flex flex-wrap items-center gap-2"><span className="text-xs text-sage-500">{translationDraft.apiKeyCount} key{translationDraft.apiKeyCount === 1 ? '' : 's'} saved for {translationDraft.provider}</span>{translationDraft.apiKeys?.map((key, index) => <span key={`${key}-${index}`} className="rounded-full border border-sage-200 bg-sage-50 px-2.5 py-1 font-mono text-[10px] text-sage-600">Key {index + 1} · {key}</span>)}</div><button type="button" disabled={savingTranslation || !translationDraft.model || (!translationKeys.trim() && translationDraft.apiKeyCount === 0)} onClick={() => void saveTranslationProvider()} className="rounded-full bg-sage-800 px-5 py-2.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.16em] text-white disabled:opacity-50">{savingTranslation ? 'Saving…' : 'Save provider'}</button></div>
         </motion.div>}
         </AnimatePresence>
       </section>

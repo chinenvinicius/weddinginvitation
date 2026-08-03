@@ -57,6 +57,18 @@ VALUES
   (1, '2026-08-12 00:00:00', '2026-08-13 00:00:00')
 ON DUPLICATE KEY UPDATE id = id;
 
+CREATE TABLE IF NOT EXISTS translation_providers (
+  provider VARCHAR(20) NOT NULL PRIMARY KEY,
+  model VARCHAR(160) NOT NULL DEFAULT '',
+  base_url VARCHAR(500) NOT NULL DEFAULT '',
+  api_keys_encrypted LONGTEXT NOT NULL,
+  key_cursor INT NOT NULL DEFAULT 0,
+  priority INT NOT NULL DEFAULT 1,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX translation_providers_priority (enabled, priority)
+);
+
 -- Translation provider configuration. API keys are encrypted by the backend
 -- before storage; plaintext keys are never returned to the browser.
 CREATE TABLE IF NOT EXISTS translation_settings (
