@@ -360,7 +360,7 @@ async function updateTranslationSettings(request: Request, env: Env) {
     const updates = ['enabled = ?', 'provider = ?', 'model = ?', 'base_url = ?'];
     const values: unknown[] = [body.enabled, body.provider, body.model.trim(), body.baseUrl.trim()];
     const apiKeys = body.apiKeys as string[] | undefined;
-    if (body.enabled && !body.model.trim()) return json({ error: 'Choose a translation model before enabling translation.' }, 400);
+    if (body.enabled && !body.model.trim() && !apiKeys) return json({ error: 'Choose a translation model before enabling translation.' }, 400);
     if (body.enabled && !apiKeys) {
       const current = await getTranslationSettings(env);
       if (!current || (await decryptApiKeys(current.apiKeysEncrypted, env.ADMIN_TOKEN)).length === 0) return json({ error: 'Add at least one API key before enabling translation.' }, 400);
