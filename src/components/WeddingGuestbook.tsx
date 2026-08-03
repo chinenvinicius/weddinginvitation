@@ -290,6 +290,8 @@ function GuestForm({ eventCode }: { eventCode: string }) {
     );
   }
 
+  const sending = state === 'sending';
+
   return (
     <div className="mx-auto max-w-2xl overflow-hidden rounded-[1.5rem] border border-sage-200/70 bg-white">
       <form onSubmit={submit} className="text-left">
@@ -297,9 +299,9 @@ function GuestForm({ eventCode }: { eventCode: string }) {
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sage-700 text-white"><Heart className="h-4 w-4 fill-white/25" /></span>
           <div className="min-w-0 flex-1">
             <label htmlFor="guest-name" className="sr-only">{text.name}</label>
-            <input id="guest-name" required minLength={2} maxLength={100} value={guestName} onChange={(event) => setGuestName(event.target.value)} placeholder="Your name" className="w-full border-0 border-b border-sage-100 bg-transparent px-0 pb-2 font-montserrat text-xs font-bold tracking-wide text-sage-800 outline-none placeholder:font-normal placeholder:text-sage-400 focus:border-sage-400" />
+            <input id="guest-name" required minLength={2} maxLength={100} value={guestName} disabled={sending} onChange={(event) => setGuestName(event.target.value)} placeholder="Your name" className="w-full border-0 border-b border-sage-100 bg-transparent px-0 pb-2 font-montserrat text-xs font-bold tracking-wide text-sage-800 outline-none placeholder:font-normal placeholder:text-sage-400 focus:border-sage-400 disabled:opacity-50" />
             <label htmlFor="guest-message" className="sr-only">{text.message}</label>
-            <textarea id="guest-message" required minLength={2} maxLength={2000} rows={3} value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Share a wish, a story, or a few words from the heart…" className="mt-2 w-full resize-none border-0 bg-transparent p-0 font-serif text-lg leading-relaxed text-sage-900 outline-none placeholder:text-sage-400" />
+            <textarea id="guest-message" required minLength={2} maxLength={2000} rows={3} value={message} disabled={sending} onChange={(event) => setMessage(event.target.value)} placeholder="Share a wish, a story, or a few words from the heart…" className="mt-2 w-full resize-none border-0 bg-transparent p-0 font-serif text-lg leading-relaxed text-sage-900 outline-none placeholder:text-sage-400 disabled:opacity-50" />
           </div>
         </div>
 
@@ -308,31 +310,31 @@ function GuestForm({ eventCode }: { eventCode: string }) {
             {photos.map(({ file, preview }, index) => (
               <div key={`${file.name}-${file.lastModified}`} className="relative aspect-square overflow-hidden rounded-xl bg-sage-100">
                 <img src={preview} alt="" className="h-full w-full object-cover" />
-                <button type="button" onClick={() => removePhoto(index)} aria-label={`Remove ${file.name}`} className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-wine-900/85 text-white shadow focus:outline-none focus:ring-2 focus:ring-white"><X className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={() => removePhoto(index)} disabled={sending} aria-label={`Remove ${file.name}`} className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-wine-900/85 text-white shadow focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50"><X className="h-3.5 w-3.5" /></button>
               </div>
             ))}
           </div>
         )}
 
         <div className="mx-5 mt-3 flex items-center justify-between border-t border-sage-100 py-3">
-          <label title={text.photoHint} className="flex cursor-pointer items-center gap-2 rounded-full px-3 py-2 font-montserrat text-[10px] font-bold uppercase tracking-[0.14em] text-sage-700 transition hover:bg-sage-50 focus-within:ring-2 focus-within:ring-sage-200">
+          <label title={text.photoHint} className={`flex items-center gap-2 rounded-full px-3 py-2 font-montserrat text-[10px] font-bold uppercase tracking-[0.14em] text-sage-700 transition hover:bg-sage-50 focus-within:ring-2 focus-within:ring-sage-200 ${sending ? 'cursor-not-allowed opacity-50 pointer-events-none' : 'cursor-pointer'}`}>
             <ImagePlus className="h-5 w-5 text-sage-600" />
             <span>Add photos <span className="font-normal normal-case tracking-normal text-sage-400">(optional)</span></span>
-            <input key={inputKey} type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(event) => choosePhotos(event.target.files)} className="sr-only" />
+            <input key={inputKey} type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={sending} onChange={(event) => choosePhotos(event.target.files)} className="sr-only" />
           </label>
           <span className="text-[10px] tabular-nums text-sage-400">{message.length}/2000</span>
         </div>
 
-        <label className="mx-5 flex cursor-pointer items-start gap-2 border-t border-sage-100 py-3 text-[11px] leading-relaxed text-sage-600">
-          <input required type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-sage-700" />
+        <label className={`mx-5 flex items-start gap-2 border-t border-sage-100 py-3 text-[11px] leading-relaxed text-sage-600 ${sending ? 'opacity-50' : 'cursor-pointer'}`}>
+          <input required type="checkbox" checked={consent} disabled={sending} onChange={(event) => setConsent(event.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-sage-700" />
           <span>My message and photos may appear on the live wedding wall.</span>
         </label>
 
         {error && <p role="alert" className="mx-5 mb-3 rounded-xl bg-wine-50 px-4 py-3 text-sm text-wine-800">{error}</p>}
 
-        <button disabled={state === 'sending'} className="group flex w-full items-center justify-center gap-2 bg-sage-800 px-6 py-3.5 font-montserrat text-[10px] font-bold uppercase tracking-[0.2em] text-white transition hover:bg-sage-700 focus:outline-none focus:ring-4 focus:ring-inset focus:ring-sage-300 disabled:cursor-wait disabled:opacity-65">
-          {state === 'sending' ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 transition group-hover:translate-x-0.5" />}
-          {state === 'sending' ? text.sending : text.send}
+        <button disabled={sending} className="group flex w-full items-center justify-center gap-2 bg-sage-800 px-6 py-3.5 font-montserrat text-[10px] font-bold uppercase tracking-[0.2em] text-white transition hover:bg-sage-700 focus:outline-none focus:ring-4 focus:ring-inset focus:ring-sage-300 disabled:cursor-wait disabled:opacity-65">
+          {sending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 transition group-hover:translate-x-0.5" />}
+          {sending ? text.sending : text.send}
         </button>
       </form>
     </div>
@@ -558,6 +560,7 @@ function AdminPanel() {
   const [loading, setLoading] = useState(Boolean(token));
   const [newSubmissionIds, setNewSubmissionIds] = useState<string[]>([]);
   const knownSubmissionIds = useRef<Set<string> | null>(null);
+  const modelsRequestedFor = useRef('');
 
   const load = async (credential: string, silent = false) => {
     if (!silent) setLoading(true);
@@ -582,7 +585,12 @@ function AdminPanel() {
       });
       if (result.translationSettings) {
         setTranslationSettings(result.translationSettings);
-        if (!silent) setTranslationDraft(result.translationSettings.providers[0] ?? emptyTranslationProvider());
+        if (!silent) {
+          const initial = result.translationSettings.providers[0] ?? emptyTranslationProvider();
+          setTranslationDraft(initial);
+          setTranslationModels([]);
+          if (initial.apiKeyCount > 0) void loadTranslationModels(initial);
+        }
       }
     } catch (loadError) {
       if (loadError instanceof Error && loadError.message === 'Unauthorized.') {
@@ -683,7 +691,7 @@ function AdminPanel() {
       if (!response.ok) throw new Error(result.error ?? 'Provider settings could not be saved.');
       const saved = { ...translationDraft, apiKeyCount: keys.length || translationDraft.apiKeyCount, apiKeys: keys.length ? keys.map((key) => `••••${key.slice(-4)}`) : translationDraft.apiKeys, keyError: undefined };
       setTranslationDraft(saved);
-      setTranslationSettings((current) => ({ enabled: true, providers: [...current.providers.filter((item) => item.provider !== saved.provider), saved].sort((a, b) => a.priority - b.priority) }));
+      setTranslationSettings((current) => ({ enabled: current.enabled, providers: [...current.providers.filter((item) => item.provider !== saved.provider), saved].sort((a, b) => a.priority - b.priority) }));
       setTranslationKeys('');
       return true;
     } catch (translationError) {
@@ -694,15 +702,18 @@ function AdminPanel() {
     }
   };
 
-  const loadTranslationModels = async () => {
+  const loadTranslationModels = async (config?: TranslationProviderConfig) => {
+    const draft = config ?? translationDraft;
+    const requestedFor = draft.provider;
+    modelsRequestedFor.current = requestedFor;
     setLoadingModels(true);
     setError('');
     try {
       const keys = translationKeys.split(/[\n,]+/).map((key) => key.trim()).filter(Boolean);
-      const response = await fetch('/api/admin/translation-models', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ provider: translationDraft.provider, baseUrl: translationDraft.baseUrl, ...(keys.length ? { apiKeys: keys } : {}) }) });
+      const response = await fetch('/api/admin/translation-models', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ provider: draft.provider, baseUrl: draft.baseUrl, ...(!config && keys.length ? { apiKeys: keys } : {}) }) });
       const result = await readApiJson<{ models?: string[]; error?: string }>(response);
       if (!response.ok) throw new Error(result.error ?? 'Models could not be loaded.');
-      setTranslationModels(result.models ?? []);
+      if (requestedFor === modelsRequestedFor.current) setTranslationModels(result.models ?? []);
     } catch (modelError) {
       setError(modelError instanceof Error ? modelError.message : 'Models could not be loaded.');
     } finally {

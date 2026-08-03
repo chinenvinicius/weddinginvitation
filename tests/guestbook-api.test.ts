@@ -7,6 +7,8 @@ import { decryptApiKeys, encryptApiKeys, translateWithRotation } from '../functi
 
 Object.defineProperty(globalThis, 'File', { value: NodeFile });
 
+const noopWaitUntil = () => {};
+
 const env = {
   TIDB_DATABASE_URL: 'mysql://unused',
   IMGBB_API_KEY: 'unused',
@@ -26,6 +28,7 @@ test('rejects a submission with the wrong event code before external calls', asy
       body: form,
     }),
     env,
+    waitUntil: noopWaitUntil,
   });
 
   assert.equal(response.status, 403);

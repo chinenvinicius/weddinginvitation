@@ -11,6 +11,7 @@ interface Env {
 interface FunctionContext {
   request: Request;
   env: Env;
+  waitUntil: (promise: Promise<unknown>) => void;
 }
 
 interface StoredPhoto {
@@ -189,7 +190,7 @@ async function uploadToImgBB(file: File, apiKey: string): Promise<StoredPhoto> {
   return { url, deleteUrl: result.data.delete_url };
 }
 
-async function createSubmission(request: Request, env: Env) {
+async function createSubmission(request: Request, env: Env, ctx: { waitUntil: (promise: Promise<unknown>) => void }) {
   if (!env.TIDB_DATABASE_URL || !env.IMGBB_API_KEY || !env.EVENT_CODE) {
     return json({ error: 'The guestbook is not configured yet.' }, 503);
   }
@@ -236,42 +237,11 @@ async function createSubmission(request: Request, env: Env) {
     return json({ error: 'The guestbook schedule is temporarily unavailable.' }, 502);
   }
 
+  const submissionId = crypto.randomUUID();
+
   try {
-    let translation = { sourceLanguage: languageCode, translations: {} as Record<string, string> };
-    try {
-      const translationSettings = await getTranslationSettingsIfInstalled(env);
-      if (translationSettings && Boolean(Number(translationSettings.enabled))) {
-        const providers = await getTranslationProviders(env);
-        let lastProviderError: unknown;
-        for (const provider of providers) {
-          if (!Boolean(Number(provider.enabled))) continue;
-          try {
-            const apiKeys = await decryptApiKeys(provider.apiKeysEncrypted, env.ADMIN_TOKEN);
-            if (!provider.model || apiKeys.length === 0) continue;
-            const result = await translateWithRotation({ provider: provider.provider, model: provider.model, baseUrl: provider.baseUrl, apiKeys, startAt: Number(provider.keyCursor) || 0, message });
-            translation = result;
-            const translationDatabase = connect({ url: env.TIDB_DATABASE_URL });
-            try {
-              await translationDatabase.execute('UPDATE translation_providers SET key_cursor = ? WHERE provider = ?', [result.nextKey, provider.provider]);
-            } catch (cursorError) {
-              if (!/translation_providers.*(?:doesn't exist|not exist|unknown)/i.test(String(cursorError))) throw cursorError;
-              await translationDatabase.execute('UPDATE translation_settings SET key_cursor = ? WHERE id = 1', [result.nextKey]);
-            }
-            lastProviderError = null;
-            break;
-          } catch (error) { lastProviderError = error; }
-        }
-        if (lastProviderError || Object.keys(translation.translations).length === 0) throw lastProviderError ?? new Error('No configured translation provider is available.');
-      }
-    } catch (translationError) {
-      console.error('Message translation failed', translationError);
-      return json({ error: 'The message could not be translated yet. Please try again.' }, 502);
-    }
+    const photos = await Promise.all(files.map((file) => uploadToImgBB(file, env.IMGBB_API_KEY)));
 
-    const photos: StoredPhoto[] = [];
-    for (const file of files) photos.push(await uploadToImgBB(file, env.IMGBB_API_KEY));
-
-    // ponytail: ImgBB has no documented delete API, so a failed DB write can orphan an upload.
     const database = connect({ url: env.TIDB_DATABASE_URL });
     await database.execute(
       `INSERT INTO submissions
@@ -280,14 +250,59 @@ async function createSubmission(request: Request, env: Env) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,
          CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END,
          CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END)`,
-      [crypto.randomUUID(), guestName, message, JSON.stringify(photos), languageCode, translation.sourceLanguage, JSON.stringify(translation.translations), consentToPublish,
+      [submissionId, guestName, message, JSON.stringify(photos), languageCode, languageCode, '{}', consentToPublish,
         autoApprove ? 'approved' : 'pending', autoApprove, autoApprove],
     );
+
+    ctx.waitUntil(backfillTranslation(submissionId, message, languageCode, env).catch((error) => {
+      console.error('Background translation failed for submission', submissionId, error);
+    }));
 
     return json({ ok: true }, 201);
   } catch (error) {
     console.error('Guestbook submission failed', error);
     return json({ error: 'The message could not be saved. Please try again.' }, 502);
+  }
+}
+
+async function backfillTranslation(submissionId: string, message: string, languageCode: string, env: Env) {
+  let translation = { sourceLanguage: languageCode, translations: {} as Record<string, string> };
+  try {
+    const translationSettings = await getTranslationSettingsIfInstalled(env);
+    if (!translationSettings || !Boolean(Number(translationSettings.enabled))) return;
+
+    const providers = await getTranslationProviders(env);
+    let lastProviderError: unknown;
+    for (const provider of providers) {
+      if (!Boolean(Number(provider.enabled))) continue;
+      try {
+        const apiKeys = await decryptApiKeys(provider.apiKeysEncrypted, env.ADMIN_TOKEN);
+        if (!provider.model || apiKeys.length === 0) continue;
+        const result = await translateWithRotation({ provider: provider.provider, model: provider.model, baseUrl: provider.baseUrl, apiKeys, startAt: Number(provider.keyCursor) || 0, message });
+        translation = result;
+        const translationDatabase = connect({ url: env.TIDB_DATABASE_URL });
+        try {
+          await translationDatabase.execute('UPDATE translation_providers SET key_cursor = ? WHERE provider = ?', [result.nextKey, provider.provider]);
+        } catch (cursorError) {
+          if (!/translation_providers.*(?:doesn't exist|not exist|unknown)/i.test(String(cursorError))) throw cursorError;
+          await translationDatabase.execute('UPDATE translation_settings SET key_cursor = ? WHERE id = 1', [result.nextKey]);
+        }
+        break;
+      } catch (error) { lastProviderError = error; }
+    }
+    if (lastProviderError || Object.keys(translation.translations).length === 0) throw lastProviderError ?? new Error('No configured translation provider is available.');
+  } catch {
+    return;
+  }
+
+  try {
+    const database = connect({ url: env.TIDB_DATABASE_URL });
+    await database.execute(
+      'UPDATE submissions SET source_language_code = ?, translations_json = ? WHERE id = ?',
+      [translation.sourceLanguage, JSON.stringify(translation.translations), submissionId],
+    );
+  } catch (error) {
+    console.error('Persisting translation for submission', submissionId, 'failed', error);
   }
 }
 
@@ -402,9 +417,9 @@ async function updateTranslationProvider(request: Request, env: Env) {
       [body.provider, body.model.trim(), body.baseUrl.trim(), encrypted, Math.max(1, Math.min(99, body.priority)), body.enabled],
     );
     await database.execute(
-      `INSERT INTO translation_settings (id, enabled, provider, model, base_url, api_keys_encrypted, key_cursor)
-       VALUES (1, TRUE, 'openrouter', '', '', '', 0)
-       ON DUPLICATE KEY UPDATE enabled = TRUE`,
+      `INSERT INTO translation_settings (id, enabled, api_keys_encrypted)
+       VALUES (1, FALSE, '')
+       ON DUPLICATE KEY UPDATE id = id`,
     );
     return json({ ok: true });
   } catch (error) {
@@ -420,8 +435,8 @@ async function updateTranslationEnabled(request: Request, env: Env) {
   try {
     const database = connect({ url: env.TIDB_DATABASE_URL });
     await database.execute(
-      `INSERT INTO translation_settings (id, enabled, provider, model, base_url, api_keys_encrypted, key_cursor)
-       VALUES (1, ?, 'openrouter', '', '', '', 0)
+      `INSERT INTO translation_settings (id, enabled, api_keys_encrypted)
+       VALUES (1, ?, '')
        ON DUPLICATE KEY UPDATE enabled = VALUES(enabled)`,
       [body.enabled],
     );
@@ -561,10 +576,11 @@ async function updateSubmission(request: Request, env: Env, id: string) {
   }
 }
 
-export const onRequest = async ({ request, env }: FunctionContext): Promise<Response> => {
+export const onRequest = async (ctx: FunctionContext): Promise<Response> => {
+  const { request, env, waitUntil } = ctx;
   const parts = new URL(request.url).pathname.replace(/^\/api\/?/, '').split('/').filter(Boolean);
 
-  if (request.method === 'POST' && parts.join('/') === 'submissions') return createSubmission(request, env);
+  if (request.method === 'POST' && parts.join('/') === 'submissions') return createSubmission(request, env, { waitUntil });
   if (request.method === 'GET' && parts.join('/') === 'schedule') return getPublicSchedule(env);
   if (request.method === 'GET' && parts.join('/') === 'gallery') return getGallery(env);
   if (request.method === 'GET' && parts.join('/') === 'admin/submissions') return getAdminSubmissions(request, env);
