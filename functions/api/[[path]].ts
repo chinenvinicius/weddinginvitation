@@ -380,7 +380,7 @@ async function updateTranslationProvider(request: Request, env: Env) {
   if (!isAdmin(request, env)) return json({ error: 'Unauthorized.' }, 401);
   let body: { provider?: unknown; model?: unknown; baseUrl?: unknown; priority?: unknown; enabled?: unknown; apiKeys?: unknown };
   try { body = await request.json() as typeof body; } catch { return json({ error: 'Invalid provider settings.' }, 400); }
-  const providers = ['openrouter', 'nvidia', 'gemini', 'ollama', 'openai', 'groq', 'together', 'cerebras', 'deepinfra', 'openai-compatible'];
+  const providers = ['openrouter', 'kilogateway', 'opencode-zen', 'nvidia', 'gemini', 'ollama', 'openai', 'groq', 'together', 'cerebras', 'deepinfra', 'openai-compatible'];
   if (typeof body.provider !== 'string' || !providers.includes(body.provider) || typeof body.model !== 'string' || typeof body.baseUrl !== 'string' || typeof body.priority !== 'number' || typeof body.enabled !== 'boolean') return json({ error: 'Invalid provider settings.' }, 400);
   if (body.apiKeys !== undefined && (!Array.isArray(body.apiKeys) || body.apiKeys.some((key) => typeof key !== 'string'))) return json({ error: 'Invalid API keys.' }, 400);
   try {
@@ -419,7 +419,7 @@ async function updateTranslationSettings(request: Request, env: Env) {
   let body: { enabled?: unknown; provider?: unknown; model?: unknown; baseUrl?: unknown; apiKeys?: unknown };
   try { body = await request.json() as typeof body; } catch { return json({ error: 'Invalid translation settings.' }, 400); }
 
-  const providers = ['openrouter', 'nvidia', 'gemini', 'ollama', 'openai', 'groq', 'together', 'cerebras', 'deepinfra', 'openai-compatible'];
+  const providers = ['openrouter', 'kilogateway', 'opencode-zen', 'nvidia', 'gemini', 'ollama', 'openai', 'groq', 'together', 'cerebras', 'deepinfra', 'openai-compatible'];
   if (typeof body.enabled !== 'boolean' || typeof body.provider !== 'string' || !providers.includes(body.provider) || typeof body.model !== 'string' || typeof body.baseUrl !== 'string') {
     return json({ error: 'Invalid translation settings.' }, 400);
   }

@@ -6,7 +6,7 @@ export const translationLanguages = {
   pt: 'Portuguese',
 } as const;
 
-export type TranslationProvider = 'openrouter' | 'nvidia' | 'gemini' | 'ollama' | 'openai' | 'groq' | 'together' | 'cerebras' | 'deepinfra' | 'openai-compatible';
+export type TranslationProvider = 'openrouter' | 'kilogateway' | 'opencode-zen' | 'nvidia' | 'gemini' | 'ollama' | 'openai' | 'groq' | 'together' | 'cerebras' | 'deepinfra' | 'openai-compatible';
 export type TranslationMap = Partial<Record<keyof typeof translationLanguages, string>>;
 
 export interface TranslationResult {
@@ -93,6 +93,8 @@ async function providerRequest(provider: TranslationProvider, model: string, bas
 
   const openAiBases: Partial<Record<TranslationProvider, string>> = {
     openrouter: 'https://openrouter.ai/api/v1',
+    kilogateway: 'https://api.kilo.ai/api/gateway',
+    'opencode-zen': 'https://opencode.ai/zen/v1',
     nvidia: 'https://integrate.api.nvidia.com/v1',
     openai: 'https://api.openai.com/v1',
     groq: 'https://api.groq.com/openai/v1',
@@ -136,6 +138,8 @@ export async function listProviderModels(provider: TranslationProvider, baseUrl:
   let url = '';
   const headers: Record<string, string> = {};
   if (provider === 'openrouter') url = 'https://openrouter.ai/api/v1/models';
+  if (provider === 'kilogateway') url = 'https://api.kilo.ai/api/gateway/models';
+  if (provider === 'opencode-zen') url = 'https://opencode.ai/zen/v1/models';
   if (provider === 'nvidia') url = 'https://integrate.api.nvidia.com/v1/models';
   if (provider === 'gemini') url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}&pageSize=1000`;
   if (provider === 'ollama') url = `${baseUrl.replace(/\/$/, '')}/api/tags`;

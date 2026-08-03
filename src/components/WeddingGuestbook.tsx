@@ -43,7 +43,7 @@ interface AdminSettings {
   wallCloseAt: string;
 }
 
-type TranslationProvider = 'openrouter' | 'nvidia' | 'gemini' | 'ollama' | 'openai' | 'groq' | 'together' | 'cerebras' | 'deepinfra' | 'openai-compatible';
+type TranslationProvider = 'openrouter' | 'kilogateway' | 'opencode-zen' | 'nvidia' | 'gemini' | 'ollama' | 'openai' | 'groq' | 'together' | 'cerebras' | 'deepinfra' | 'openai-compatible';
 
 interface TranslationAdminSettings {
   enabled: boolean;
@@ -785,7 +785,7 @@ function AdminPanel() {
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600">Provider
             <select value={translationDraft.provider} onChange={(event) => { const provider = event.target.value as TranslationProvider; const saved = translationSettings.providers.find((item) => item.provider === provider); setTranslationModels([]); setTranslationKeys(''); setTranslationDraft(saved ?? { ...emptyTranslationProvider(), provider, priority: Math.max(0, ...translationSettings.providers.map((item) => item.priority)) + 1, baseUrl: provider === 'openai-compatible' ? '' : 'https://ollama.com' }); }} className="rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500">
-              <option value="openrouter">OpenRouter</option><option value="nvidia">NVIDIA NIM</option><option value="gemini">Google Gemini</option><option value="openai">OpenAI</option><option value="groq">Groq</option><option value="together">Together AI</option><option value="cerebras">Cerebras</option><option value="deepinfra">DeepInfra</option><option value="ollama">Ollama / Ollama Cloud</option><option value="openai-compatible">Other OpenAI-compatible API</option>
+              <option value="openrouter">OpenRouter</option><option value="kilogateway">Kilo Gateway</option><option value="opencode-zen">OpenCode Zen</option><option value="nvidia">NVIDIA NIM</option><option value="gemini">Google Gemini</option><option value="openai">OpenAI</option><option value="groq">Groq</option><option value="together">Together AI</option><option value="cerebras">Cerebras</option><option value="deepinfra">DeepInfra</option><option value="ollama">Ollama / Ollama Cloud</option><option value="openai-compatible">Other OpenAI-compatible API</option>
             </select>
           </label>
           <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600">Model
@@ -800,7 +800,7 @@ function AdminPanel() {
             <span className="font-sans text-[11px] font-normal normal-case tracking-normal text-sage-500">New keys replace the saved pool. Keys are encrypted before storage and rotate automatically. If you change the admin token, enter the keys again.</span>
           </label>
         </div>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-sage-100 pt-4"><div className="flex flex-wrap items-center gap-2"><span className="text-xs text-sage-500">{translationDraft.apiKeyCount} key{translationDraft.apiKeyCount === 1 ? '' : 's'} saved for {translationDraft.provider}</span>{translationDraft.apiKeys?.map((key, index) => <span key={`${key}-${index}`} className="rounded-full border border-sage-200 bg-sage-50 px-2.5 py-1 font-mono text-[10px] text-sage-600">Key {index + 1} · {key}</span>)}</div><button type="button" disabled={savingTranslation || !translationDraft.model || (!translationKeys.trim() && translationDraft.apiKeyCount === 0)} onClick={() => void saveTranslationProvider()} className="rounded-full bg-sage-800 px-5 py-2.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.16em] text-white disabled:opacity-50">{savingTranslation ? 'Saving…' : 'Save provider'}</button></div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-sage-100 pt-4"><div className="flex flex-wrap items-center gap-2"><span className="text-xs text-sage-500">{translationDraft.apiKeyCount} key{translationDraft.apiKeyCount === 1 ? '' : 's'} saved for {translationDraft.provider}</span>{translationDraft.apiKeys?.map((key, index) => <span key={`${key}-${index}`} className="rounded-full border border-sage-200 bg-sage-50 px-2.5 py-1 font-mono text-[10px] text-sage-600">Key {index + 1} · {key}</span>)}</div><button type="button" disabled={savingTranslation || (!translationKeys.trim() && translationDraft.apiKeyCount === 0)} onClick={() => void saveTranslationProvider()} className="rounded-full bg-sage-800 px-5 py-2.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.16em] text-white disabled:opacity-50">{savingTranslation ? 'Saving…' : 'Save provider'}</button></div>
         </motion.div>}
         </AnimatePresence>
       </section>
