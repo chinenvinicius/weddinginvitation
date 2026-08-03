@@ -39,6 +39,7 @@ test('returns an empty public gallery while the database is not configured', asy
   const response = await onRequest({
     request: new Request('https://wedding.example/api/gallery'),
     env: { ...env, TIDB_DATABASE_URL: '' },
+    waitUntil: noopWaitUntil,
   });
 
   assert.equal(response.status, 200);
@@ -49,6 +50,7 @@ test('reports a closed schedule while the database is not configured', async () 
   const response = await onRequest({
     request: new Request('https://wedding.example/api/schedule'),
     env: { ...env, TIDB_DATABASE_URL: '' },
+    waitUntil: noopWaitUntil,
   });
 
   assert.equal(response.status, 200);
@@ -72,6 +74,7 @@ test('protects automatic-approval settings with the admin token', async () => {
       body: JSON.stringify({ autoApprove: true }),
     }),
     env,
+    waitUntil: noopWaitUntil,
   });
 
   assert.equal(response.status, 401);
@@ -91,6 +94,7 @@ test('requires explicit consent when a submission contains a photo', async () =>
       body: form,
     }),
     env,
+    waitUntil: noopWaitUntil,
   });
 
   assert.equal(response.status, 400);
@@ -102,7 +106,7 @@ test('worker routes API requests to the guestbook backend', async () => {
     ...env,
     TIDB_DATABASE_URL: '',
     ASSETS: { fetch: async () => new Response('asset') },
-  });
+  }, { waitUntil: noopWaitUntil });
 
   assert.equal(response.headers.get('content-type'), 'application/json');
   assert.equal((await response.json() as { wallVisible: boolean }).wallVisible, false);
@@ -112,7 +116,7 @@ test('worker delegates page requests to static assets', async () => {
   const response = await worker.fetch(new Request('https://wedding.example/admin'), {
     ...env,
     ASSETS: { fetch: async () => new Response('wedding invitation') },
-  });
+  }, { waitUntil: noopWaitUntil });
 
   assert.equal(await response.text(), 'wedding invitation');
 });
