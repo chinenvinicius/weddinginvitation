@@ -58,6 +58,7 @@ interface TranslationProviderConfig {
   enabled: boolean;
   apiKeyCount: number;
   apiKeys?: string[];
+  keyError?: string;
 }
 
 const emptyTranslationProvider = (): TranslationProviderConfig => ({ provider: 'openrouter', model: '', baseUrl: 'https://ollama.com', priority: 1, enabled: true, apiKeyCount: 0, apiKeys: [] });
@@ -679,7 +680,7 @@ function AdminPanel() {
       });
       const result = await readApiJson<{ error?: string }>(response);
       if (!response.ok) throw new Error(result.error ?? 'Provider settings could not be saved.');
-      const saved = { ...translationDraft, apiKeyCount: keys.length || translationDraft.apiKeyCount, apiKeys: keys.length ? keys.map((key) => `••••${key.slice(-4)}`) : translationDraft.apiKeys };
+      const saved = { ...translationDraft, apiKeyCount: keys.length || translationDraft.apiKeyCount, apiKeys: keys.length ? keys.map((key) => `••••${key.slice(-4)}`) : translationDraft.apiKeys, keyError: undefined };
       setTranslationDraft(saved);
       setTranslationSettings((current) => ({ enabled: true, providers: [...current.providers.filter((item) => item.provider !== saved.provider), saved].sort((a, b) => a.priority - b.priority) }));
       setTranslationKeys('');
@@ -803,6 +804,7 @@ function AdminPanel() {
           <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600 md:col-span-2">API keys
             <textarea rows={3} value={translationKeys} onChange={(event) => setTranslationKeys(event.target.value)} placeholder={translationDraft.apiKeyCount ? `${translationDraft.apiKeyCount} encrypted key${translationDraft.apiKeyCount === 1 ? '' : 's'} saved · leave empty to keep them` : 'Paste one API key per line'} className="resize-y rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-mono text-xs font-normal normal-case tracking-normal text-sage-800 outline-none placeholder:font-sans placeholder:text-sage-400 focus:border-sage-500" />
             <span className="font-sans text-[11px] font-normal normal-case tracking-normal text-sage-500">New keys replace the saved pool. Keys are encrypted before storage and rotate automatically. If you change the admin token, enter the keys again.</span>
+            {translationDraft.keyError && <span role="alert" className="font-sans text-[11px] font-semibold normal-case tracking-normal text-wine-700">{translationDraft.keyError}</span>}
           </label>
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-sage-100 pt-4"><div className="flex flex-wrap items-center gap-2"><span className="text-xs text-sage-500">{translationDraft.apiKeyCount} key{translationDraft.apiKeyCount === 1 ? '' : 's'} saved for {translationDraft.provider}</span>{translationDraft.apiKeys?.map((key, index) => <span key={`${key}-${index}`} className="rounded-full border border-sage-200 bg-sage-50 px-2.5 py-1 font-mono text-[10px] text-sage-600">Key {index + 1} · {key}</span>)}</div><button type="button" disabled={savingTranslation || (!translationKeys.trim() && translationDraft.apiKeyCount === 0)} onClick={() => void saveTranslationProvider()} className="rounded-full bg-sage-800 px-5 py-2.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.16em] text-white disabled:opacity-50">{savingTranslation ? 'Saving…' : 'Save provider'}</button></div>

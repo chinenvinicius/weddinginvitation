@@ -353,8 +353,14 @@ async function getAdminSubmissions(request: Request, env: Env) {
       if (translation) {
         const providers = await getTranslationProviders(env);
         translationSettings = { enabled: Boolean(Number(translation.enabled)), providers: await Promise.all(providers.map(async (provider) => {
-          const apiKeys = await decryptApiKeys(provider.apiKeysEncrypted, env.ADMIN_TOKEN);
-          return { provider: provider.provider, model: provider.model, baseUrl: provider.baseUrl, priority: Number(provider.priority), enabled: Boolean(Number(provider.enabled)), apiKeys: apiKeys.map((key) => `••••${key.slice(-4)}`), apiKeyCount: apiKeys.length };
+          const config = { provider: provider.provider, model: provider.model, baseUrl: provider.baseUrl, priority: Number(provider.priority), enabled: Boolean(Number(provider.enabled)) };
+          try {
+            const apiKeys = await decryptApiKeys(provider.apiKeysEncrypted, env.ADMIN_TOKEN);
+            return { ...config, apiKeys: apiKeys.map((key) => `••••${key.slice(-4)}`), apiKeyCount: apiKeys.length };
+          } catch (error) {
+            console.error(`Could not decrypt ${provider.provider} API keys`, error);
+            return { ...config, apiKeys: [], apiKeyCount: 0, keyError: 'Saved keys cannot be unlocked. Enter fresh keys and save this provider again.' };
+          }
         })) };
       }
     } catch (translationError) {
