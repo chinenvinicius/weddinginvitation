@@ -39,6 +39,13 @@ interface AdminSettings {
   wallCloseAt: string;
 }
 
+async function readApiJson<T>(response: Response): Promise<T> {
+  if (!response.headers.get('content-type')?.includes('application/json')) {
+    throw new Error('The guestbook backend is not available yet. Deploy the latest code to Cloudflare and try again.');
+  }
+  return response.json() as Promise<T>;
+}
+
 const toLocalInput = (value?: string | null) => {
   if (!value) return '';
   const utc = new Date(`${value.replace(' ', 'T').replace(/Z$/, '')}Z`);
@@ -222,7 +229,7 @@ function GuestForm({ eventCode }: { eventCode: string }) {
       for (const { file } of photos) form.append('photos', await resizePhoto(file));
 
       const response = await fetch('/api/submissions', { method: 'POST', body: form });
-      const result = (await response.json()) as { error?: string };
+      const result = await readApiJson<{ error?: string }>(response);
       if (!response.ok) throw new Error(result.error ?? 'The message could not be sent.');
 
       photos.forEach(({ preview }) => URL.revokeObjectURL(preview));
@@ -317,7 +324,7 @@ function WeddingWall({ compact = false, projector = false }: { compact?: boolean
     const load = async () => {
       try {
         const response = await fetch('/api/gallery', { cache: 'no-store' });
-        const result = (await response.json()) as { posts?: GalleryPost[] };
+        const result = await readApiJson<{ posts?: GalleryPost[] }>(response);
         if (active && response.ok) {
           const nextPosts = result.posts ?? [];
           if (knownPostIds.current) {
@@ -492,7 +499,7 @@ function AdminPanel() {
     if (!silent) setError('');
     try {
       const response = await fetch('/api/admin/submissions', { headers: { Authorization: `Bearer ${credential}` } });
-      const result = (await response.json()) as { submissions?: AdminSubmission[]; settings?: { autoApprove?: boolean; submissionsOpenAt?: string | null; submissionsCloseAt?: string | null; wallOpenAt?: string | null; wallCloseAt?: string | null }; error?: string };
+      const result = await readApiJson<{ submissions?: AdminSubmission[]; settings?: { autoApprove?: boolean; submissionsOpenAt?: string | null; submissionsCloseAt?: string | null; wallOpenAt?: string | null; wallCloseAt?: string | null }; error?: string }>(response);
       if (!response.ok) throw new Error(result.error ?? 'Could not load submissions.');
       const nextSubmissions = result.submissions ?? [];
       if (knownSubmissionIds.current) setNewSubmissionIds(nextSubmissions.filter((item) => !knownSubmissionIds.current?.has(item.id)).map((item) => item.id));
