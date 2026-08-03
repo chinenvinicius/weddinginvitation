@@ -699,6 +699,16 @@ function AdminPanel() {
     if (await saveTranslation()) await loadTranslationModels();
   };
 
+  const toggleTranslation = (enabled: boolean) => {
+    setTranslationSettings((current) => ({ ...current, enabled }));
+    if (!enabled) {
+      void fetch('/api/admin/translation-settings', {
+        method: 'PATCH', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...translationSettings, enabled: false }),
+      });
+    }
+  };
+
   if (!token || error === 'Unauthorized.') {
     return (
       <div className="mx-auto max-w-md rounded-3xl border border-sage-200 bg-white/80 p-7 shadow-xl">
@@ -757,11 +767,13 @@ function AdminPanel() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div><div className="flex items-center gap-2"><Languages className="h-4 w-4 text-wine-600" /><h3 className="font-serif text-xl font-semibold text-sage-900">AI translation</h3></div><p className="mt-1 max-w-2xl text-xs leading-relaxed text-sage-500">Create English, Japanese, Bisaya, Tagalog, and Portuguese versions before a message is published. The original always appears first.</p></div>
           <label className="relative inline-flex shrink-0 cursor-pointer items-center">
-            <input type="checkbox" role="switch" checked={translationSettings.enabled} onChange={(event) => setTranslationSettings((current) => ({ ...current, enabled: event.target.checked }))} className="peer sr-only" />
+            <input type="checkbox" role="switch" checked={translationSettings.enabled} onChange={(event) => toggleTranslation(event.target.checked)} className="peer sr-only" />
             <span className="h-6 w-11 rounded-full bg-sage-200 transition peer-checked:bg-sage-700 peer-focus-visible:ring-4 peer-focus-visible:ring-sage-200" />
             <span className="absolute left-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
           </label>
         </div>
+        <AnimatePresence initial={false}>
+        {translationSettings.enabled && <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600">Provider
             <select value={translationSettings.provider} onChange={(event) => { const provider = event.target.value as TranslationProvider; setTranslationModels([]); setTranslationSettings((current) => ({ ...current, provider, model: '', baseUrl: provider === 'openai-compatible' ? '' : current.baseUrl })); }} className="rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500">
@@ -779,6 +791,8 @@ function AdminPanel() {
           </label>
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-sage-100 pt-4"><div className="flex flex-wrap items-center gap-2"><span className="text-xs text-sage-500">{translationSettings.apiKeyCount} key{translationSettings.apiKeyCount === 1 ? '' : 's'} currently saved</span>{translationSettings.apiKeys?.map((key, index) => <span key={`${key}-${index}`} className="rounded-full border border-sage-200 bg-sage-50 px-2.5 py-1 font-mono text-[10px] text-sage-600">Key {index + 1} · {key}</span>)}</div><button type="button" disabled={savingTranslation || (translationSettings.enabled && !translationSettings.model)} onClick={() => void saveTranslation()} className="rounded-full bg-sage-800 px-5 py-2.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.16em] text-white disabled:opacity-50">{savingTranslation ? 'Saving…' : 'Save translation'}</button></div>
+        </motion.div>}
+        </AnimatePresence>
       </section>
       {error && <p role="alert" className="mt-5 rounded-xl bg-wine-50 p-4 text-wine-800">{error}</p>}
       <div className="mt-5 grid gap-3">
