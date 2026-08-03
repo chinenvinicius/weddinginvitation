@@ -544,6 +544,7 @@ function AdminPanel() {
     wallCloseAt: '',
   });
   const [translationSettings, setTranslationSettings] = useState<TranslationAdminSettings>({ enabled: false, providers: [] });
+  const [translationSettingsOpen, setTranslationSettingsOpen] = useState(true);
   const [translationDraft, setTranslationDraft] = useState<TranslationProviderConfig>(emptyTranslationProvider);
   const [translationKeys, setTranslationKeys] = useState('');
   const [translationModels, setTranslationModels] = useState<string[]>([]);
@@ -773,14 +774,18 @@ function AdminPanel() {
       <section className="mt-5 rounded-2xl border border-sage-200/80 bg-white/75 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div><div className="flex items-center gap-2"><Languages className="h-4 w-4 text-wine-600" /><h3 className="font-serif text-xl font-semibold text-sage-900">AI translation</h3></div><p className="mt-1 max-w-2xl text-xs leading-relaxed text-sage-500">Create English, Japanese, Bisaya, Tagalog, and Portuguese versions before a message is published. The original always appears first.</p></div>
-          <label className="relative inline-flex shrink-0 cursor-pointer items-center">
-            <input type="checkbox" role="switch" checked={translationSettings.enabled} onChange={(event) => toggleTranslation(event.target.checked)} className="peer sr-only" />
-            <span className="h-6 w-11 rounded-full bg-sage-200 transition peer-checked:bg-sage-700 peer-focus-visible:ring-4 peer-focus-visible:ring-sage-200" />
-            <span className="absolute left-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
-          </label>
+          <div className="flex items-center gap-3">
+            <button type="button" aria-expanded={translationSettingsOpen} onClick={() => setTranslationSettingsOpen((open) => !open)} className="rounded-full border border-sage-300 bg-white px-4 py-2 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-700 transition hover:bg-sage-50">{translationSettingsOpen ? 'Hide settings' : 'Show settings'}</button>
+            <label className="relative inline-flex shrink-0 cursor-pointer items-center" title={translationSettings.enabled ? 'AI translation is on' : 'AI translation is off'}>
+              <span className="sr-only">Enable AI translation</span>
+              <input type="checkbox" role="switch" aria-label="Enable AI translation" checked={translationSettings.enabled} onChange={(event) => toggleTranslation(event.target.checked)} className="peer sr-only" />
+              <span className="h-6 w-11 rounded-full bg-sage-200 transition peer-checked:bg-sage-700 peer-focus-visible:ring-4 peer-focus-visible:ring-sage-200" />
+              <span className="absolute left-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
+            </label>
+          </div>
         </div>
         <AnimatePresence initial={false}>
-        {translationSettings.enabled && <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+        {translationSettingsOpen && <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
         {translationSettings.providers.length > 0 && <div className="mt-5 grid gap-2 sm:grid-cols-2">{translationSettings.providers.map((item) => <button key={item.provider} type="button" onClick={() => { setTranslationDraft(item); setTranslationModels([]); setTranslationKeys(''); }} className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left transition ${item.provider === translationDraft.provider ? 'border-sage-600 bg-sage-50' : 'border-sage-200 bg-white hover:border-sage-400'}`}><span><span className="block font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-wine-600">Priority {item.priority}</span><span className="mt-1 block font-serif text-base text-sage-900">{item.provider} · {item.model || 'Choose model'}</span></span><span className="text-[10px] text-sage-500">{item.apiKeyCount} keys</span></button>)}</div>}
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600">Provider
