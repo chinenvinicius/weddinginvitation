@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { File as NodeFile } from 'node:buffer';
 import test from 'node:test';
 import { onRequest } from '../functions/api/[[path]]';
+import worker from '../worker';
 
 Object.defineProperty(globalThis, 'File', { value: NodeFile });
 
@@ -90,4 +91,24 @@ test('requires explicit consent when a submission contains a photo', async () =>
 
   assert.equal(response.status, 400);
   assert.deepEqual(await response.json(), { error: 'Publishing consent is required.' });
+});
+
+test('worker routes API requests to the guestbook backend', async () => {
+  const response = await worker.fetch(new Request('https://wedding.example/api/schedule'), {
+    ...env,
+    TIDB_DATABASE_URL: '',
+    ASSETS: { fetch: async () => new Response('asset') },
+  });
+
+  assert.equal(response.headers.get('content-type'), 'application/json');
+  assert.equal((await response.json() as { wallVisible: boolean }).wallVisible, false);
+});
+
+test('worker delegates page requests to static assets', async () => {
+  const response = await worker.fetch(new Request('https://wedding.example/admin'), {
+    ...env,
+    ASSETS: { fetch: async () => new Response('wedding invitation') },
+  });
+
+  assert.equal(await response.text(), 'wedding invitation');
 });
