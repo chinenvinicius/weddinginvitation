@@ -43,7 +43,7 @@ interface AdminSettings {
   wallCloseAt: string;
 }
 
-type TranslationProvider = 'openrouter' | 'nvidia' | 'gemini' | 'ollama';
+type TranslationProvider = 'openrouter' | 'nvidia' | 'gemini' | 'ollama' | 'openai' | 'groq' | 'together' | 'cerebras' | 'deepinfra' | 'openai-compatible';
 
 interface TranslationAdminSettings {
   enabled: boolean;
@@ -670,8 +670,10 @@ function AdminPanel() {
       if (!response.ok) throw new Error(result.error ?? 'Translation settings could not be saved.');
       setTranslationSettings((current) => ({ ...current, apiKeyCount: keys.length || current.apiKeyCount }));
       setTranslationKeys('');
+      return true;
     } catch (translationError) {
       setError(translationError instanceof Error ? translationError.message : 'Translation settings could not be saved.');
+      return false;
     } finally {
       setSavingTranslation(false);
     }
@@ -690,6 +692,10 @@ function AdminPanel() {
     } finally {
       setLoadingModels(false);
     }
+  };
+
+  const saveAndLoadTranslationModels = async () => {
+    if (await saveTranslation()) await loadTranslationModels();
   };
 
   if (!token || error === 'Unauthorized.') {
@@ -757,15 +763,15 @@ function AdminPanel() {
         </div>
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600">Provider
-            <select value={translationSettings.provider} onChange={(event) => { setTranslationModels([]); setTranslationSettings((current) => ({ ...current, provider: event.target.value as TranslationProvider, model: '' })); }} className="rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500">
-              <option value="openrouter">OpenRouter</option><option value="nvidia">NVIDIA NIM</option><option value="gemini">Google Gemini</option><option value="ollama">Ollama / Ollama Cloud</option>
+            <select value={translationSettings.provider} onChange={(event) => { const provider = event.target.value as TranslationProvider; setTranslationModels([]); setTranslationSettings((current) => ({ ...current, provider, model: '', baseUrl: provider === 'openai-compatible' ? '' : current.baseUrl })); }} className="rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500">
+              <option value="openrouter">OpenRouter</option><option value="nvidia">NVIDIA NIM</option><option value="gemini">Google Gemini</option><option value="openai">OpenAI</option><option value="groq">Groq</option><option value="together">Together AI</option><option value="cerebras">Cerebras</option><option value="deepinfra">DeepInfra</option><option value="ollama">Ollama / Ollama Cloud</option><option value="openai-compatible">Other OpenAI-compatible API</option>
             </select>
           </label>
           <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600">Model
-            <div className="flex gap-2"><input list="translation-models" required value={translationSettings.model} onChange={(event) => setTranslationSettings((current) => ({ ...current, model: event.target.value }))} placeholder="Select or enter a model" className="min-w-0 flex-1 rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500" /><button type="button" onClick={() => void loadTranslationModels()} disabled={loadingModels || translationSettings.apiKeyCount === 0} title="Load models from provider" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-sage-200 bg-white text-sage-600 transition hover:bg-sage-50 disabled:opacity-40"><RefreshCw className={`h-4 w-4 ${loadingModels ? 'animate-spin' : ''}`} /></button></div>
+            <div className="flex gap-2"><input list="translation-models" required value={translationSettings.model} onChange={(event) => setTranslationSettings((current) => ({ ...current, model: event.target.value }))} placeholder="Save keys, then load a model" className="min-w-0 flex-1 rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500" /><button type="button" onClick={() => void saveAndLoadTranslationModels()} disabled={loadingModels || savingTranslation || (!translationKeys.trim() && translationSettings.apiKeyCount === 0)} title="Save API keys and load models" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-sage-200 bg-white text-sage-600 transition hover:bg-sage-50 disabled:opacity-40"><RefreshCw className={`h-4 w-4 ${loadingModels || savingTranslation ? 'animate-spin' : ''}`} /></button></div>
             <datalist id="translation-models">{translationModels.map((model) => <option key={model} value={model} />)}</datalist>
           </label>
-          {translationSettings.provider === 'ollama' && <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600 md:col-span-2">Ollama server URL<input type="url" value={translationSettings.baseUrl} onChange={(event) => setTranslationSettings((current) => ({ ...current, baseUrl: event.target.value }))} placeholder="https://ollama.com" className="rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500" /></label>}
+          {['ollama', 'openai-compatible'].includes(translationSettings.provider) && <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600 md:col-span-2">{translationSettings.provider === 'ollama' ? 'Ollama server URL' : 'OpenAI-compatible base URL'}<input type="url" value={translationSettings.baseUrl} onChange={(event) => setTranslationSettings((current) => ({ ...current, baseUrl: event.target.value }))} placeholder={translationSettings.provider === 'ollama' ? 'https://ollama.com' : 'https://provider.example/v1'} className="rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-sans text-sm font-normal normal-case tracking-normal text-sage-800 outline-none focus:border-sage-500" /></label>}
           <label className="grid gap-1.5 font-montserrat text-[9px] font-bold uppercase tracking-[0.14em] text-sage-600 md:col-span-2">API keys
             <textarea rows={3} value={translationKeys} onChange={(event) => setTranslationKeys(event.target.value)} placeholder={translationSettings.apiKeyCount ? `${translationSettings.apiKeyCount} encrypted key${translationSettings.apiKeyCount === 1 ? '' : 's'} saved · leave empty to keep them` : 'Paste one API key per line'} className="resize-y rounded-lg border border-sage-200 bg-white px-3 py-2.5 font-mono text-xs font-normal normal-case tracking-normal text-sage-800 outline-none placeholder:font-sans placeholder:text-sage-400 focus:border-sage-500" />
             <span className="font-sans text-[11px] font-normal normal-case tracking-normal text-sage-500">New keys replace the saved pool. Keys are encrypted before storage and rotate automatically. If you change the admin token, enter the keys again.</span>

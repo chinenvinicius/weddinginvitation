@@ -6,7 +6,7 @@ export const translationLanguages = {
   pt: 'Portuguese',
 } as const;
 
-export type TranslationProvider = 'openrouter' | 'nvidia' | 'gemini' | 'ollama';
+export type TranslationProvider = 'openrouter' | 'nvidia' | 'gemini' | 'ollama' | 'openai' | 'groq' | 'together' | 'cerebras' | 'deepinfra' | 'openai-compatible';
 export type TranslationMap = Partial<Record<keyof typeof translationLanguages, string>>;
 
 export interface TranslationResult {
@@ -91,9 +91,16 @@ async function providerRequest(provider: TranslationProvider, model: string, bas
     return result.message?.content ?? '';
   }
 
-  const endpoint = provider === 'openrouter'
-    ? 'https://openrouter.ai/api/v1/chat/completions'
-    : 'https://integrate.api.nvidia.com/v1/chat/completions';
+  const openAiBases: Partial<Record<TranslationProvider, string>> = {
+    openrouter: 'https://openrouter.ai/api/v1',
+    nvidia: 'https://integrate.api.nvidia.com/v1',
+    openai: 'https://api.openai.com/v1',
+    groq: 'https://api.groq.com/openai/v1',
+    together: 'https://api.together.xyz/v1',
+    cerebras: 'https://api.cerebras.ai/v1',
+    deepinfra: 'https://api.deepinfra.com/v1/openai',
+  };
+  const endpoint = `${(openAiBases[provider] ?? baseUrl).replace(/\/$/, '')}/chat/completions`;
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -132,6 +139,13 @@ export async function listProviderModels(provider: TranslationProvider, baseUrl:
   if (provider === 'nvidia') url = 'https://integrate.api.nvidia.com/v1/models';
   if (provider === 'gemini') url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}&pageSize=1000`;
   if (provider === 'ollama') url = `${baseUrl.replace(/\/$/, '')}/api/tags`;
+  if (['openai', 'groq', 'together', 'cerebras', 'deepinfra', 'openai-compatible'].includes(provider)) {
+    const openAiBases: Partial<Record<TranslationProvider, string>> = {
+      openai: 'https://api.openai.com/v1', groq: 'https://api.groq.com/openai/v1', together: 'https://api.together.xyz/v1',
+      cerebras: 'https://api.cerebras.ai/v1', deepinfra: 'https://api.deepinfra.com/v1/openai',
+    };
+    url = `${(openAiBases[provider] ?? baseUrl).replace(/\/$/, '')}/models`;
+  }
   if (provider !== 'gemini') headers.Authorization = `Bearer ${apiKey}`;
 
   const response = await fetch(url, { headers });

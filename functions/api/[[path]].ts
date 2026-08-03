@@ -348,11 +348,11 @@ async function updateTranslationSettings(request: Request, env: Env) {
   let body: { enabled?: unknown; provider?: unknown; model?: unknown; baseUrl?: unknown; apiKeys?: unknown };
   try { body = await request.json() as typeof body; } catch { return json({ error: 'Invalid translation settings.' }, 400); }
 
-  const providers = ['openrouter', 'nvidia', 'gemini', 'ollama'];
+  const providers = ['openrouter', 'nvidia', 'gemini', 'ollama', 'openai', 'groq', 'together', 'cerebras', 'deepinfra', 'openai-compatible'];
   if (typeof body.enabled !== 'boolean' || typeof body.provider !== 'string' || !providers.includes(body.provider) || typeof body.model !== 'string' || typeof body.baseUrl !== 'string') {
     return json({ error: 'Invalid translation settings.' }, 400);
   }
-  if (body.provider === 'ollama' && (!body.baseUrl.startsWith('https://') && !body.baseUrl.startsWith('http://'))) return json({ error: 'Enter a valid Ollama server URL.' }, 400);
+  if (['ollama', 'openai-compatible'].includes(body.provider) && (!body.baseUrl.startsWith('https://') && !body.baseUrl.startsWith('http://'))) return json({ error: 'Enter a valid provider server URL.' }, 400);
   if (body.apiKeys !== undefined && (!Array.isArray(body.apiKeys) || body.apiKeys.some((key) => typeof key !== 'string'))) return json({ error: 'Invalid API keys.' }, 400);
 
   try {
