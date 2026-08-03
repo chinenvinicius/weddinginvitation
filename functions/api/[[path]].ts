@@ -317,13 +317,13 @@ async function getAdminSubmissions(request: Request, env: Env) {
     let translationSettings = null;
     try {
       const translation = await getTranslationSettings(env);
-      if (translation) translationSettings = {
-        enabled: Boolean(Number(translation.enabled)),
-        provider: translation.provider,
-        model: translation.model,
-        baseUrl: translation.baseUrl,
-        apiKeyCount: (await decryptApiKeys(translation.apiKeysEncrypted, env.ADMIN_TOKEN)).length,
-      };
+      if (translation) {
+        const apiKeys = await decryptApiKeys(translation.apiKeysEncrypted, env.ADMIN_TOKEN);
+        translationSettings = {
+          enabled: Boolean(Number(translation.enabled)), provider: translation.provider, model: translation.model, baseUrl: translation.baseUrl,
+          apiKeys: apiKeys.map((key) => `••••${key.slice(-4)}`), apiKeyCount: apiKeys.length,
+        };
+      }
     } catch (translationError) {
       console.error('Translation settings query failed', translationError);
     }
