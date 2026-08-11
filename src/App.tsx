@@ -293,6 +293,10 @@ export default function App() {
             {t.footerThanks}
           </p>
 
+          <p className="font-montserrat text-xs font-semibold tracking-[0.12em] text-[#CBB199]">
+            #VinIrishlyEverAfter
+          </p>
+
           <hr className="w-16 border-t border-sage-800/80 my-4" />
 
           <p className="text-[10px] font-montserrat text-sage-500 uppercase tracking-wider">
