@@ -32,6 +32,10 @@ export default function BurgerMenu({ items }: BurgerMenuProps) {
       window.location.assign('/?admin=1');
       return;
     }
+    if (id === 'guestbook-page') {
+      window.location.assign('/?guestbook=0812');
+      return;
+    }
     requestAnimationFrame(() => {
       document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });

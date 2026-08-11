@@ -61,7 +61,7 @@ export default function App() {
   const navItems = [
     { id: 'section-cover', label: t.navCover },
     { id: 'section-gallery', label: t.navGallery },
-    ...(guestbookOpen ? [{ id: 'section-guestbook', label: 'Share a memory' }] : []),
+    ...(guestbookOpen ? [{ id: 'guestbook-page', label: 'Messages & Photos' }] : []),
     { id: 'section-sponsors', label: t.navSponsors },
     { id: 'section-entourage', label: t.navEntourage },
     { id: 'section-ceremony', label: t.navCeremony },
