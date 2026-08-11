@@ -860,6 +860,7 @@ function AdminPanel() {
 }
 
 function GuestbookInvitation() {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -878,7 +879,8 @@ function GuestbookInvitation() {
         <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-sage-700 text-white shadow-lg"><MessageCircleHeart className="h-6 w-6" /></span>
         <p className="mt-5 font-montserrat text-[10px] font-bold uppercase tracking-[0.28em] text-sage-600">Live wedding guestbook</p>
         <h2 className="mt-2 font-serif text-4xl font-semibold text-sage-900 sm:text-5xl">Share this moment with us</h2>
-        <p className="mx-auto mt-4 max-w-lg font-serif text-lg italic leading-relaxed text-sage-600">Leave a message for the groom and add the photos you captured today.</p>
+        <p className="mt-4 font-montserrat text-xs font-bold tracking-[0.08em] text-wine-700">#VinIrishlyEverAfter</p>
+        <p className="mx-auto mt-2 max-w-lg font-serif text-lg italic leading-relaxed text-sage-600">{t.guestbookInvitationMessage}</p>
         <a href="/?guestbook=0812" className="mt-7 inline-flex items-center gap-2 rounded-full bg-wine-800 px-7 py-4 font-montserrat text-[10px] font-bold uppercase tracking-[0.22em] text-white shadow-[0_14px_30px_-14px_rgba(91,31,39,0.75)] transition hover:-translate-y-0.5 hover:bg-wine-700 focus:outline-none focus:ring-4 focus:ring-wine-200">
           <Sparkles className="h-4 w-4" /> Share a memory
         </a>

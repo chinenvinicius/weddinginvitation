@@ -102,6 +102,7 @@ export const translations = {
     navCeremony: 'Ceremony & Program',
     navVenue: 'Venue',
     navDetails: 'Details & Dress Code',
+    guestbookInvitationMessage: 'We’d love to hear your heartfelt wishes and see the special moments you captured. Thank you for being part of our celebration and helping us preserve these precious memories! 🤍📸✨',
   },
   pt: {
     headerDate: '12.08.26',
@@ -196,6 +197,7 @@ export const translations = {
     navCeremony: 'Cerimônia e Programa',
     navVenue: 'Local',
     navDetails: 'Detalhes e Traje',
+    guestbookInvitationMessage: 'Adoraríamos receber seus votos de coração e ver os momentos especiais que você registrou. Obrigado por fazer parte da nossa celebração e nos ajudar a preservar essas memórias preciosas! 🤍📸✨',
   },
   ja: {
     headerDate: '2026.08.12',
@@ -290,6 +292,7 @@ export const translations = {
     navCeremony: '式次第',
     navVenue: '会場',
     navDetails: '詳細と服装',
+    guestbookInvitationMessage: '皆さまからの心温まるメッセージと、撮影された特別な瞬間をぜひお寄せください。私たちのお祝いにご参加いただき、この大切な思い出を残すお手伝いをしてくださり、ありがとうございます！ 🤍📸✨',
   },
 } as const;
 
